@@ -1,0 +1,30 @@
+﻿{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Flakes",
+	"Description": "Generic Serialization API",
+	"Category": "Serialization",
+	"CreatedBy": "Guy (Drakynfly) Lundvall",
+	"CreatedByURL": "https://github.com/Drakynfly",
+	"SupportURL": "https://discord.gg/AAk9yNwKk8",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "Flakes",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "StructUtils",
+			"Enabled": true
+		}
+	]
+}
