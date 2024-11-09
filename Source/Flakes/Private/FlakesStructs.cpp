@@ -49,7 +49,11 @@ namespace Flakes
 		void PostLoadStruct(const FStructView& Struct)
 		{
 			check(Struct.GetScriptStruct())
-			Struct.GetScriptStruct()->GetCppStructOps()->PostScriptConstruct(Struct.GetMemory());
+			auto StructOps = Struct.GetScriptStruct()->GetCppStructOps();
+			if (StructOps->HasPostScriptConstruct())
+			{
+				StructOps->PostScriptConstruct(Struct.GetMemory());
+			}
 		}
 
 		void PostLoadUObject(UObject* Object)
@@ -101,7 +105,7 @@ namespace Flakes
 		return CreateObject<FSerializationProvider_Binary>(Flake, Outer, ExpectedClass);
 	}
 
-	void FSerializationProvider_Binary::Static_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData)
+	void FSerializationProvider_Binary::ReadData(const FConstStructView& Struct, TArray<uint8>& OutData)
 	{
 		FRecursiveMemoryWriter MemoryWriter(OutData, nullptr);
 		// For some reason, SerializeItem is not const, so we have to const_cast the ScriptStruct
@@ -113,7 +117,7 @@ namespace Flakes
 		MemoryWriter.Close();
 	}
 
-	void FSerializationProvider_Binary::Static_ReadData(const UObject* Object, TArray<uint8>& OutData)
+	void FSerializationProvider_Binary::ReadData(const UObject* Object, TArray<uint8>& OutData)
 	{
 		FRecursiveMemoryWriter MemoryWriter(OutData, Object);
 		const_cast<UObject*>(Object)->Serialize(MemoryWriter);
@@ -121,7 +125,7 @@ namespace Flakes
 		MemoryWriter.Close();
 	}
 
-	void FSerializationProvider_Binary::Static_WriteData(const FStructView& Struct, const TArray<uint8>& Data)
+	void FSerializationProvider_Binary::WriteData(const FStructView& Struct, const TArray<uint8>& Data)
 	{
 		FRecursiveMemoryReader MemoryReader(Data, true, nullptr);
 		// For some reason, SerializeItem is not const, so we have to const_cast the ScriptStruct
@@ -130,18 +134,12 @@ namespace Flakes
 		MemoryReader.Close();
 	}
 
-	void FSerializationProvider_Binary::Static_WriteData(UObject* Object, const TArray<uint8>& Data)
+	void FSerializationProvider_Binary::WriteData(UObject* Object, const TArray<uint8>& Data)
 	{
 		FRecursiveMemoryReader MemoryReader(Data, true, Object);
 		Object->Serialize(MemoryReader);
 		MemoryReader.FlushCache();
 		MemoryReader.Close();
-	}
-
-	FName FSerializationProvider_Binary::GetProviderName()
-	{
-		static const FLazyName BinarySerializationProvider("Binary");
-		return BinarySerializationProvider;
 	}
 
 	FFlake CreateFlake(const FName Serializer, const FConstStructView& Struct, const FReadOptions Options)
@@ -153,7 +151,7 @@ namespace Flakes
 			FFlakesModule::Get().UseSerializationProvider(Serializer,
 				[&](ISerializationProvider* Provider)
 				{
-					Provider->ReadData(Struct, Raw);
+					Provider->Virtual_ReadData(Struct, Raw);
 				});
 		}
 
@@ -177,7 +175,7 @@ namespace Flakes
 		FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
 			{
-				Provider->ReadData(Object, Raw);
+				Provider->Virtual_ReadData(Object, Raw);
 			});
 
 		Private::CompressFlake(Flake, Raw, Options.Compressor, Options.CompressionLevel);
@@ -193,7 +191,7 @@ namespace Flakes
 		FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
 			{
-				Provider->WriteData(Struct, Raw);
+				Provider->Virtual_WriteData(Struct, Raw);
 			});
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
@@ -210,7 +208,7 @@ namespace Flakes
 		FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
 			{
-				Provider->WriteData(Object, Raw);
+				Provider->Virtual_WriteData(Object, Raw);
 			});
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)

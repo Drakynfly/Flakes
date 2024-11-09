@@ -92,7 +92,7 @@ namespace Flakes
 	>
 	FFlake CreateFlake(const T& Struct)
 	{
-		return CreateFlake(FInstancedStruct::Make(Struct));
+		return CreateFlake(FConstStructView::Make(Struct));
 	}
 
 	template <
@@ -110,52 +110,65 @@ namespace Flakes
 	}
 
 	template <typename T>
+	T CreateStruct(const FFlake& Flake)
+	{
+		return CreateStruct(Flake, T::StaticStruct()).template Get<T>();
+	}
+
+	template <typename T>
 	T* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackage())
 	{
 		return Cast<T>(CreateObject(Flake, Outer, T::StaticClass()));
 	}
 
+	/* Interface for using Providers dynamically from their FName. */
 	struct ISerializationProvider : FVirtualDestructor, FNoncopyable
 	{
 		virtual FName GetProviderName() = 0;
-		virtual void ReadData(const FConstStructView& Struct, TArray<uint8>& OutData) = 0;
-		virtual void ReadData(const UObject* Object, TArray<uint8>& OutData) = 0;
-		virtual void WriteData(const FStructView& Struct, const TArray<uint8>& Data) = 0;
-		virtual void WriteData(UObject* Object, const TArray<uint8>& Data) = 0;
+		virtual void Virtual_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData) = 0;
+		virtual void Virtual_ReadData(const UObject* Object, TArray<uint8>& OutData) = 0;
+		virtual void Virtual_WriteData(const FStructView& Struct, const TArray<uint8>& Data) = 0;
+		virtual void Virtual_WriteData(UObject* Object, const TArray<uint8>& Data) = 0;
 	};
 
+	// Template implementation of ISerializationProvider that forwards to the static versions.
 	template <typename Impl>
 	struct TSerializationProvider : ISerializationProvider
 	{
-		virtual void ReadData(const FConstStructView& Struct, TArray<uint8>& OutData) override final
+		virtual void Virtual_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData) override final
 		{
-			Impl::Static_ReadData(Struct, OutData);
+			Impl::ReadData(Struct, OutData);
 		}
-		virtual void ReadData(const UObject* Object, TArray<uint8>& OutData) override final
+		virtual void Virtual_ReadData(const UObject* Object, TArray<uint8>& OutData) override final
 		{
-			Impl::Static_ReadData(Object, OutData);
+			Impl::ReadData(Object, OutData);
 		}
-		virtual void WriteData(const FStructView& Struct, const TArray<uint8>& Data) override final
+		virtual void Virtual_WriteData(const FStructView& Struct, const TArray<uint8>& Data) override final
 		{
-			Impl::Static_WriteData(Struct, Data);
+			Impl::WriteData(Struct, Data);
 		}
-		virtual void WriteData(UObject* Object, const TArray<uint8>& Data) override final
+		virtual void Virtual_WriteData(UObject* Object, const TArray<uint8>& Data) override final
 		{
-			Impl::Static_WriteData(Object, Data);
+			Impl::WriteData(Object, Data);
 		}
 	};
 
-#define SERIALIZATION_PROVIDER_HEADER(Name)\
-	struct FSerializationProvider_##Name final : TSerializationProvider<FSerializationProvider_##Name>\
+	// Macro to declare a new provider. The implementations of ReadData and WriteData must be defined to match these signatures.
+#define SERIALIZATION_PROVIDER_HEADER(API, Name)\
+	struct API FSerializationProvider_##Name final : TSerializationProvider<FSerializationProvider_##Name>\
 	{\
-		virtual FName GetProviderName() override;\
-		static void Static_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData);\
-		static void Static_ReadData(const UObject* Object, TArray<uint8>& OutData);\
-		static void Static_WriteData(const FStructView& Struct, const TArray<uint8>& Data);\
-		static void Static_WriteData(UObject* Object, const TArray<uint8>& Data);\
-	};
+		virtual FName GetProviderName() override\
+		{\
+			static const FLazyName Name##SerializationProvider(TEXT(#Name));\
+			return Name##SerializationProvider;\
+		}\
+		static void ReadData(const FConstStructView& Struct, TArray<uint8>& OutData);\
+		static void ReadData(const UObject* Object, TArray<uint8>& OutData);\
+		static void WriteData(const FStructView& Struct, const TArray<uint8>& Data);\
+		static void WriteData(UObject* Object, const TArray<uint8>& Data);\
+	};\
 
-	SERIALIZATION_PROVIDER_HEADER(Binary)
+	SERIALIZATION_PROVIDER_HEADER(FLAKES_API, Binary)
 
 	// Low-level non-template flake API
 	FLAKES_API FFlake CreateFlake(FName Serializer, const FConstStructView& Struct, FReadOptions Options = {});
@@ -178,7 +191,7 @@ namespace Flakes
 		Flake.Struct = Struct.GetScriptStruct();
 
 		TArray<uint8> Raw;
-		TSerializationProvider::Static_ReadData(Struct, Raw);
+		TSerializationProvider::ReadData(Struct, Raw);
 		Private::CompressFlake(Flake, Raw, Options.Compressor, Options.CompressionLevel);
 
 		return Flake;
@@ -196,7 +209,7 @@ namespace Flakes
 		Flake.Struct = Object->GetClass();
 
 		TArray<uint8> Raw;
-		TSerializationProvider::Static_ReadData(Object, Raw);
+		TSerializationProvider::ReadData(Object, Raw);
 		Private::CompressFlake(Flake, Raw, Options.Compressor, Options.CompressionLevel);
 
 		return Flake;
@@ -211,7 +224,7 @@ namespace Flakes
 		TArray<uint8> Raw;
 		Private::DecompressFlake(Flake, Raw);
 
-		TSerializationProvider::Static_WriteData(Struct, Raw);
+		TSerializationProvider::WriteData(Struct, Raw);
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
 		{
@@ -228,7 +241,7 @@ namespace Flakes
 		TArray<uint8> Raw;
 		Private::DecompressFlake(Flake, Raw);
 
-		TSerializationProvider::Static_WriteData(Object, Raw);
+		TSerializationProvider::WriteData(Object, Raw);
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
 		{
