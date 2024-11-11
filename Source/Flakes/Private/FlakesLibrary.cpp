@@ -13,21 +13,21 @@ TArray<FString> UFlakesLibrary::GetAllProviders()
 	return Out;
 }
 
-FFlake UFlakesLibrary::CreateFlake_Struct(const FInstancedStruct& Struct, const FName Serializer)
+FFlake UFlakesLibrary::MakeFlake_Struct(const FInstancedStruct& Struct, const FName Serializer)
 {
-	return Flakes::CreateFlake(Serializer, Struct);
+	return Flakes::MakeFlake(Serializer, Struct, nullptr);
 }
 
-FFlake UFlakesLibrary::CreateFlake(const UObject* Object, const FName Serializer)
+FFlake UFlakesLibrary::MakeFlake(const UObject* Object, const FName Serializer)
 {
-	return Flakes::CreateFlake(Serializer, Object);
+	return Flakes::MakeFlake(Serializer, Object);
 }
 
-FFlake_Actor UFlakesLibrary::CreateFlake_Actor(const AActor* Actor, const FName Serializer)
+FFlake_Actor UFlakesLibrary::MakeFlake_Actor(const AActor* Actor, const FName Serializer)
 {
 	check(Actor);
 
-	FFlake_Actor Flake = Flakes::CreateFlake(Serializer, Actor);
+	FFlake_Actor Flake = Flakes::MakeFlake(Serializer, Actor);
 	Flake.Transform = Actor->GetTransform();
 
 	return Flake;
@@ -53,14 +53,12 @@ AActor* UFlakesLibrary::ConstructActorFromFlake(const FFlake_Actor& Flake, UObje
 		return nullptr;
 	}
 
-	if (!IsValid(ExpectedClass))
-	{
-		return nullptr;
-	}
+	if (!Flakes::Private::VerifyStruct(Flake, ExpectedClass)) return nullptr;
 
-	const TSubclassOf<AActor> ActorClass = LoadClass<AActor>(nullptr, *Flake.Struct.ToString(), nullptr, LOAD_None, nullptr);
+	const TSubclassOf<AActor> ActorClass = Cast<UClass>(Flake.Struct.TryLoad());
 
-	if (!ActorClass->IsChildOf(ExpectedClass))
+	// Unlikely because we already called VerifyStruct
+	if (UNLIKELY(!IsValid(ActorClass)))
 	{
 		return nullptr;
 	}

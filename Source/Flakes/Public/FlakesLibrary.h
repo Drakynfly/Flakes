@@ -21,18 +21,18 @@ class FLAKES_API UFlakesLibrary : public UBlueprintFunctionLibrary
 
 public:
 	/** Serialize a struct into a flake. */
-	UFUNCTION(BlueprintPure, Category = "Flakes|FlakeLibrary", meta = (DisplayName = "Create Flake (Struct)"))
-	static FFlake CreateFlake_Struct(const FInstancedStruct& Struct,
+	UFUNCTION(BlueprintPure, Category = "Flakes|FlakeLibrary", meta = (DisplayName = "Make Flake (Struct)"))
+	static FFlake MakeFlake_Struct(const FInstancedStruct& Struct,
 		UPARAM(meta=(GetOptions="Flakes.FlakesLibrary.GetAllProviders")) FName Serializer = FName("Binary"));
 
 	/** Serialize an object (and all its subobjects) into a flake. */
-	UFUNCTION(BlueprintPure, Category = "Flakes|FlakeLibrary", meta = (DisplayName = "Create Flake (Object)"))
-	static FFlake CreateFlake(const UObject* Object,
+	UFUNCTION(BlueprintPure, Category = "Flakes|FlakeLibrary", meta = (DisplayName = "Make Flake (Object)"))
+	static FFlake MakeFlake(const UObject* Object,
 		UPARAM(meta=(GetOptions="Flakes.FlakesLibrary.GetAllProviders")) FName Serializer = FName("Binary"));
 
 	/** Serialize an actor (and all its subobjects) into a flake. */
-	UFUNCTION(BlueprintPure, Category = "Flakes|FlakeLibrary", meta = (DisplayName = "Create Flake (Actor)"))
-	static FFlake_Actor CreateFlake_Actor(const AActor* Actor,
+	UFUNCTION(BlueprintPure, Category = "Flakes|FlakeLibrary", meta = (DisplayName = "Make Flake (Actor)"))
+	static FFlake_Actor MakeFlake_Actor(const AActor* Actor,
 		UPARAM(meta=(GetOptions="Flakes.FlakesLibrary.GetAllProviders")) FName Serializer = FName("Binary"));
 
 	/**

@@ -68,6 +68,8 @@ namespace Flakes
 
 	namespace Private
 	{
+		FLAKES_API bool VerifyStruct(const FFlake& Flake, const UStruct* Expected);
+
 		FLAKES_API void CompressFlake(FFlake& Flake, const TArray<uint8>& Raw,
 			const FOodleDataCompression::ECompressor Compressor,
 			const FOodleDataCompression::ECompressionLevel CompressionLevel);
@@ -79,20 +81,20 @@ namespace Flakes
 	}
 
 	// Low-level binary-only flake API
-	FLAKES_API FFlake CreateFlake(const FConstStructView& Struct, const FReadOptions Options = {});
-	FLAKES_API FFlake CreateFlake(const UObject* Object, const FReadOptions Options = {});
-	FLAKES_API void WriteStruct(const FStructView& Struct, const FFlake& Flake);
+	FLAKES_API FFlake MakeFlake(const FConstStructView& Struct, const UObject* Outer, const FReadOptions Options = {});
+	FLAKES_API FFlake MakeFlake(const UObject* Object, const FReadOptions Options = {});
+	FLAKES_API void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer = nullptr);
 	FLAKES_API void WriteObject(UObject* Object, const FFlake& Flake);
-	FLAKES_API FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct);
-	FLAKES_API UObject* CreateObject(const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass);
+	FLAKES_API FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer = nullptr);
+	FLAKES_API UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer = nullptr);
 
 	template <
 		typename T
 		UE_REQUIRES(TModels_V<CBaseStructureProvider, T>)
 	>
-	FFlake CreateFlake(const T& Struct)
+	FFlake MakeFlake(const T& Struct)
 	{
-		return CreateFlake(FConstStructView::Make(Struct));
+		return MakeFlake(FConstStructView::Make(Struct));
 	}
 
 	template <
@@ -110,9 +112,9 @@ namespace Flakes
 	}
 
 	template <typename T>
-	T CreateStruct(const FFlake& Flake)
+	T CreateStruct(const FFlake& Flake, UObject* Outer = nullptr)
 	{
-		return CreateStruct(Flake, T::StaticStruct()).template Get<T>();
+		return CreateStruct(Flake, Outer, T::StaticStruct()).template Get<T>();
 	}
 
 	template <typename T>
@@ -125,9 +127,9 @@ namespace Flakes
 	struct ISerializationProvider : FVirtualDestructor, FNoncopyable
 	{
 		virtual FName GetProviderName() = 0;
-		virtual void Virtual_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData) = 0;
+		virtual void Virtual_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer = nullptr) = 0;
 		virtual void Virtual_ReadData(const UObject* Object, TArray<uint8>& OutData) = 0;
-		virtual void Virtual_WriteData(const FStructView& Struct, const TArray<uint8>& Data) = 0;
+		virtual void Virtual_WriteData(const FStructView& Struct, const TArray<uint8>& Data, UObject* Outer = nullptr) = 0;
 		virtual void Virtual_WriteData(UObject* Object, const TArray<uint8>& Data) = 0;
 	};
 
@@ -135,17 +137,17 @@ namespace Flakes
 	template <typename Impl>
 	struct TSerializationProvider : ISerializationProvider
 	{
-		virtual void Virtual_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData) override final
+		virtual void Virtual_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer = nullptr) override final
 		{
-			Impl::ReadData(Struct, OutData);
+			Impl::ReadData(Struct, OutData, Outer);
 		}
 		virtual void Virtual_ReadData(const UObject* Object, TArray<uint8>& OutData) override final
 		{
 			Impl::ReadData(Object, OutData);
 		}
-		virtual void Virtual_WriteData(const FStructView& Struct, const TArray<uint8>& Data) override final
+		virtual void Virtual_WriteData(const FStructView& Struct, const TArray<uint8>& Data, UObject* Outer = nullptr) override final
 		{
-			Impl::WriteData(Struct, Data);
+			Impl::WriteData(Struct, Data, Outer);
 		}
 		virtual void Virtual_WriteData(UObject* Object, const TArray<uint8>& Data) override final
 		{
@@ -162,20 +164,24 @@ namespace Flakes
 			static const FLazyName Name##SerializationProvider(TEXT(#Name));\
 			return Name##SerializationProvider;\
 		}\
-		static void ReadData(const FConstStructView& Struct, TArray<uint8>& OutData);\
+		static void ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer = nullptr);\
 		static void ReadData(const UObject* Object, TArray<uint8>& OutData);\
-		static void WriteData(const FStructView& Struct, const TArray<uint8>& Data);\
+		static void WriteData(const FStructView& Struct, const TArray<uint8>& Data, UObject* Outer = nullptr);\
 		static void WriteData(UObject* Object, const TArray<uint8>& Data);\
 	};\
+	using Type = FSerializationProvider_##Name;
 
-	SERIALIZATION_PROVIDER_HEADER(FLAKES_API, Binary)
+	namespace Binary
+	{
+		SERIALIZATION_PROVIDER_HEADER(FLAKES_API, Binary)
+	}
 
 	// Low-level non-template flake API
-	FLAKES_API FFlake CreateFlake(FName Serializer, const FConstStructView& Struct, FReadOptions Options = {});
-	FLAKES_API FFlake CreateFlake(FName Serializer, const UObject* Object, FReadOptions Options = {});
-	FLAKES_API void WriteStruct(FName Serializer, const FStructView& Struct, const FFlake& Flake, FWriteOptions Options = {});
+	FLAKES_API FFlake MakeFlake(FName Serializer, const FConstStructView& Struct, const UObject* Outer = nullptr, FReadOptions Options = {});
+	FLAKES_API FFlake MakeFlake(FName Serializer, const UObject* Object, FReadOptions Options = {});
+	FLAKES_API void WriteStruct(FName Serializer, const FStructView& Struct, const FFlake& Flake, UObject* Outer = nullptr, FWriteOptions Options = {});
 	FLAKES_API void WriteObject(FName Serializer, UObject* Object, const FFlake& Flake, FWriteOptions Options = {});
-	FLAKES_API FInstancedStruct CreateStruct(FName Serializer, const FFlake& Flake, const UScriptStruct* ExpectedStruct);
+	FLAKES_API FInstancedStruct CreateStruct(FName Serializer, const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer = nullptr);
 	FLAKES_API UObject* CreateObject(FName Serializer, const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass);
 
 	// Low-level templated flake API
@@ -183,7 +189,7 @@ namespace Flakes
 		typename TSerializationProvider
 		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
 	>
-	static FFlake CreateFlake(const FConstStructView& Struct, const FReadOptions Options = {})
+	FFlake MakeFlake(const FConstStructView& Struct, const UObject* Outer = nullptr, const FReadOptions Options = {})
 	{
 		check(Struct.IsValid())
 
@@ -191,7 +197,7 @@ namespace Flakes
 		Flake.Struct = Struct.GetScriptStruct();
 
 		TArray<uint8> Raw;
-		TSerializationProvider::ReadData(Struct, Raw);
+		TSerializationProvider::ReadData(Struct, Raw, Outer);
 		Private::CompressFlake(Flake, Raw, Options.Compressor, Options.CompressionLevel);
 
 		return Flake;
@@ -201,7 +207,7 @@ namespace Flakes
 		typename TSerializationProvider
 		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
 	>
-	static FFlake CreateFlake(const UObject* Object, const FReadOptions Options = {})
+	FFlake MakeFlake(const UObject* Object, const FReadOptions Options = {})
 	{
 		check(Object && !Object->IsA<AActor>());
 
@@ -219,12 +225,12 @@ namespace Flakes
 		typename TSerializationProvider
 		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
 	>
-	static void WriteStruct(const FStructView& Struct, const FFlake& Flake, const FWriteOptions Options = {})
+	void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer, const FWriteOptions Options = {})
 	{
 		TArray<uint8> Raw;
 		Private::DecompressFlake(Flake, Raw);
 
-		TSerializationProvider::WriteData(Struct, Raw);
+		TSerializationProvider::WriteData(Struct, Raw, Outer);
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
 		{
@@ -253,32 +259,37 @@ namespace Flakes
 		typename TSerializationProvider
 		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
 	>
-	FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct)
+	FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer = nullptr)
 	{
-		if (!IsValid(ExpectedStruct))
-		{
-			return {};
-		}
-
-		const UScriptStruct* StructType = Cast<UScriptStruct>(Flake.Struct.TryLoad());
-
-		if (!IsValid(StructType))
-		{
-			return {};
-		}
-
-		if (!StructType->IsChildOf(ExpectedStruct))
-		{
-			return {};
-		}
+		if (!Private::VerifyStruct(Flake, ExpectedStruct)) return {};
 
 		FInstancedStruct CreatedStruct;
-		CreatedStruct.InitializeAs(StructType);
+		CreatedStruct.InitializeAs(Cast<UScriptStruct>(Flake.Struct.TryLoad()));
 
 		FWriteOptions Options;
 		Options.ExecPostLoadOrPostScriptConstruct = true;
 
-		WriteStruct<TSerializationProvider>(CreatedStruct, Flake, Options);
+		WriteStruct<TSerializationProvider>(CreatedStruct, Flake, Outer, Options);
+
+		return CreatedStruct;
+	}
+
+	template <
+		typename TSerializationProvider,
+		typename TStruct
+		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value &&
+					TModels_V<CBaseStructureProvider, TStruct>)
+	>
+	TStruct CreateStruct(const FFlake& Flake, UObject* Outer = nullptr)
+	{
+		if (!Private::VerifyStruct(Flake, TBaseStructure<TStruct>::Get())) return {};
+
+		TStruct CreatedStruct;
+
+		FWriteOptions Options;
+		Options.ExecPostLoadOrPostScriptConstruct = true;
+
+		WriteStruct<TSerializationProvider>(FStructView::Make(CreatedStruct), Flake, Outer, Options);
 
 		return CreatedStruct;
 	}
@@ -287,26 +298,27 @@ namespace Flakes
 		typename TSerializationProvider
 		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
 	>
-	UObject* CreateObject(const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass)
+	UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer = GetTransientPackage())
 	{
-		if (!IsValid(ExpectedClass) || ExpectedClass->IsChildOf<AActor>())
+		if (!Private::VerifyStruct(Flake, ExpectedClass)) return nullptr;
+
+		// @todo handle explicit Actor deserialization in a separate function
+		/*
+		if (ExpectedClass->IsChildOf<AActor>())
+		{
+			return nullptr;
+		}
+		*/
+
+		const UClass* ObjClass = Cast<UClass>(Flake.Struct.TryLoad());
+
+		// Unlikely because we already called VerifyStruct
+		if (UNLIKELY(!IsValid(ObjClass)))
 		{
 			return nullptr;
 		}
 
-		const UClass* ObjClass = LoadClass<UObject>(nullptr, *Flake.Struct.ToString(), nullptr, LOAD_None, nullptr);
-
-		if (!IsValid(ObjClass))
-		{
-			return nullptr;
-		}
-
-		if (!ObjClass->IsChildOf(ExpectedClass))
-		{
-			return nullptr;
-		}
-
-		auto&& LoadedObject = NewObject<UObject>(Outer, ObjClass);
+		UObject* LoadedObject = NewObject<UObject>(Outer, ObjClass);
 
 		FWriteOptions Options;
 		Options.ExecPostLoadOrPostScriptConstruct = true;
@@ -323,6 +335,6 @@ namespace Flakes
 	>
 	T* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackage())
 	{
-		return Cast<T>(CreateObject<TSerializationProvider>(Flake, Outer, T::StaticClass()));
+		return Cast<T>(CreateObject<TSerializationProvider>(Flake, T::StaticClass(), Outer));
 	}
 }

@@ -6,24 +6,23 @@
 
 void UFlakesSaveGame::SetObjectToSave(UObject* Obj)
 {
-	Flake = Flakes::CreateFlake(Obj);
+	Flake = Flakes::MakeFlake(Obj);
 }
 
 void UFlakesSaveGame::SetStructToSave(const FInstancedStruct& Data)
 {
-	Flake = Flakes::CreateFlake(FConstStructView(Data));
+	Flake = Flakes::MakeFlake(FConstStructView(Data), nullptr);
 }
 
 UObject* UFlakesSaveGame::LoadObjectFromData(UObject* Outer) const
 {
-	return Flakes::CreateObject(Flake, Outer, UObject::StaticClass());
+	return Flakes::CreateObject(Flake, UObject::StaticClass(), Outer);
 }
 
 UObject* UFlakesSaveGame::LoadObjectFromDataClassChecked(UObject* Outer, const UClass* ExpectedClass) const
 {
-	if (auto&& Obj = LoadObjectFromData(Outer))
+	if (auto&& Obj = Flakes::CreateObject(Flake, ExpectedClass, Outer))
 	{
-		check(Obj->GetClass()->IsChildOf(ExpectedClass));
 		return Obj;
 	}
 

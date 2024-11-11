@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved..
 
 #include "FlakesModule.h"
 
@@ -13,7 +13,7 @@ FFlakesModule& FFlakesModule::Get()
 
 void FFlakesModule::StartupModule()
 {
-	AddSerializationProvider(MakeUnique<Flakes::FSerializationProvider_Binary>());
+	AddSerializationProvider(MakeUnique<Flakes::Binary::Type>());
 }
 
 void FFlakesModule::ShutdownModule()

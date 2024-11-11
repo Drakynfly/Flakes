@@ -22,9 +22,30 @@ namespace Flakes
 {
 	namespace Private
 	{
+		bool VerifyStruct(const FFlake& Flake, const UStruct* Expected)
+		{
+			if (!ensureMsgf(IsValid(Expected), TEXT("Invalid Expected Type. Prefer passing UObject::StaticClass(), over nullptr")))
+			{
+				return false;
+			}
+
+			const UStruct* StructType = Cast<UStruct>(Flake.Struct.TryLoad());
+			if (!IsValid(StructType))
+			{
+				return false;
+			}
+
+			if (!StructType->IsChildOf(Expected))
+			{
+				return false;
+			}
+
+			return true;
+		}
+
 		void CompressFlake(FFlake& Flake, const TArray<uint8>& Raw,
-			const FOodleDataCompression::ECompressor Compressor,
-			const FOodleDataCompression::ECompressionLevel CompressionLevel)
+						   const FOodleDataCompression::ECompressor Compressor,
+						   const FOodleDataCompression::ECompressionLevel CompressionLevel)
 		{
 #if WITH_EDITOR
 			const auto BeforeCompression = Raw.Num();
@@ -75,74 +96,77 @@ namespace Flakes
 		}
 	}
 
-	FFlake CreateFlake(const FConstStructView& Struct, const FReadOptions Options)
+	FFlake MakeFlake(const FConstStructView& Struct, const UObject* Outer, const FReadOptions Options)
 	{
-		return CreateFlake<FSerializationProvider_Binary>(Struct, Options);
+		return MakeFlake<Binary::Type>(Struct, Outer, Options);
 	}
 
-	FFlake CreateFlake(const UObject* Object, const FReadOptions Options)
+	FFlake MakeFlake(const UObject* Object, const FReadOptions Options)
 	{
-		return CreateFlake<FSerializationProvider_Binary>(Object, Options);
+		return MakeFlake<Binary::Type>(Object, Options);
 	}
 
-	void WriteStruct(const FStructView& Struct, const FFlake& Flake)
+	void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer)
 	{
-		WriteStruct<FSerializationProvider_Binary>(Struct, Flake);
+		WriteStruct<Binary::Type>(Struct, Flake, Outer);
 	}
 
 	void WriteObject(UObject* Object, const FFlake& Flake)
 	{
-		WriteObject<FSerializationProvider_Binary>(Object, Flake);
+		WriteObject<Binary::Type>(Object, Flake);
 	}
 
-	FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct)
+	FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer)
 	{
-		return CreateStruct<FSerializationProvider_Binary>(Flake, ExpectedStruct);
+		return CreateStruct<Binary::Type>(Flake, ExpectedStruct, Outer);
 	}
 
-	UObject* CreateObject(const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass)
+	UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer)
 	{
-		return CreateObject<FSerializationProvider_Binary>(Flake, Outer, ExpectedClass);
+		return CreateObject<Binary::Type>(Flake, ExpectedClass, Outer);
 	}
 
-	void FSerializationProvider_Binary::ReadData(const FConstStructView& Struct, TArray<uint8>& OutData)
+	namespace Binary
 	{
-		FRecursiveMemoryWriter MemoryWriter(OutData, nullptr);
-		// For some reason, SerializeItem is not const, so we have to const_cast the ScriptStruct
-		// We also have to const_cast the memory because *we* know that this function only reads from it, but
-		// SerializeItem is a bidirectional serializer, so it doesn't.
-		const_cast<UScriptStruct*>(Struct.GetScriptStruct())->SerializeItem(MemoryWriter,
-			const_cast<uint8*>(Struct.GetMemory()), nullptr);
-		MemoryWriter.FlushCache();
-		MemoryWriter.Close();
+		void FSerializationProvider_Binary::ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer)
+		{
+			FRecursiveMemoryWriter MemoryWriter(OutData, Outer);
+			// For some reason, SerializeItem is not const, so we have to const_cast the ScriptStruct
+			// We also have to const_cast the memory because *we* know that this function only reads from it, but
+			// SerializeItem is a bidirectional serializer, so it doesn't.
+			const_cast<UScriptStruct*>(Struct.GetScriptStruct())->SerializeItem(MemoryWriter,
+				const_cast<uint8*>(Struct.GetMemory()), nullptr);
+			MemoryWriter.FlushCache();
+			MemoryWriter.Close();
+		}
+
+		void FSerializationProvider_Binary::ReadData(const UObject* Object, TArray<uint8>& OutData)
+		{
+			FRecursiveMemoryWriter MemoryWriter(OutData, Object);
+			const_cast<UObject*>(Object)->Serialize(MemoryWriter);
+			MemoryWriter.FlushCache();
+			MemoryWriter.Close();
+		}
+
+		void FSerializationProvider_Binary::WriteData(const FStructView& Struct, const TArray<uint8>& Data, UObject* Outer)
+		{
+			FRecursiveMemoryReader MemoryReader(Data, true, Outer);
+			// For some reason, SerializeItem is not const, so we have to const_cast the ScriptStruct
+			const_cast<UScriptStruct*>(Struct.GetScriptStruct())->SerializeItem(MemoryReader, Struct.GetMemory(), nullptr);
+			MemoryReader.FlushCache();
+			MemoryReader.Close();
+		}
+
+		void FSerializationProvider_Binary::WriteData(UObject* Object, const TArray<uint8>& Data)
+		{
+			FRecursiveMemoryReader MemoryReader(Data, true, Object);
+			Object->Serialize(MemoryReader);
+			MemoryReader.FlushCache();
+			MemoryReader.Close();
+		}
 	}
 
-	void FSerializationProvider_Binary::ReadData(const UObject* Object, TArray<uint8>& OutData)
-	{
-		FRecursiveMemoryWriter MemoryWriter(OutData, Object);
-		const_cast<UObject*>(Object)->Serialize(MemoryWriter);
-		MemoryWriter.FlushCache();
-		MemoryWriter.Close();
-	}
-
-	void FSerializationProvider_Binary::WriteData(const FStructView& Struct, const TArray<uint8>& Data)
-	{
-		FRecursiveMemoryReader MemoryReader(Data, true, nullptr);
-		// For some reason, SerializeItem is not const, so we have to const_cast the ScriptStruct
-		const_cast<UScriptStruct*>(Struct.GetScriptStruct())->SerializeItem(MemoryReader, Struct.GetMemory(), nullptr);
-		MemoryReader.FlushCache();
-		MemoryReader.Close();
-	}
-
-	void FSerializationProvider_Binary::WriteData(UObject* Object, const TArray<uint8>& Data)
-	{
-		FRecursiveMemoryReader MemoryReader(Data, true, Object);
-		Object->Serialize(MemoryReader);
-		MemoryReader.FlushCache();
-		MemoryReader.Close();
-	}
-
-	FFlake CreateFlake(const FName Serializer, const FConstStructView& Struct, const FReadOptions Options)
+	FFlake MakeFlake(const FName Serializer, const FConstStructView& Struct, const UObject* Outer, const FReadOptions Options)
 	{
 		TArray<uint8> Raw;
 
@@ -151,7 +175,7 @@ namespace Flakes
 			FFlakesModule::Get().UseSerializationProvider(Serializer,
 				[&](ISerializationProvider* Provider)
 				{
-					Provider->Virtual_ReadData(Struct, Raw);
+					Provider->Virtual_ReadData(Struct, Raw, Outer);
 				});
 		}
 
@@ -163,7 +187,7 @@ namespace Flakes
 		return Flake;
 	}
 
-	FFlake CreateFlake(const FName Serializer, const UObject* Object, const FReadOptions Options)
+	FFlake MakeFlake(const FName Serializer, const UObject* Object, const FReadOptions Options)
 	{
 		check(Object && !Object->IsA<AActor>());
 
@@ -183,7 +207,7 @@ namespace Flakes
 		return Flake;
 	}
 
-	void WriteStruct(const FName Serializer, const FStructView& Struct, const FFlake& Flake, const FWriteOptions Options)
+	void WriteStruct(const FName Serializer, const FStructView& Struct, const FFlake& Flake, UObject* Outer, const FWriteOptions Options)
 	{
 		TArray<uint8> Raw;
 		Private::DecompressFlake(Flake, Raw);
@@ -191,7 +215,7 @@ namespace Flakes
 		FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
 			{
-				Provider->Virtual_WriteData(Struct, Raw);
+				Provider->Virtual_WriteData(Struct, Raw, Outer);
 			});
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
@@ -217,56 +241,42 @@ namespace Flakes
 		}
 	}
 
-	FInstancedStruct CreateStruct(const FName Serializer, const FFlake& Flake, const UScriptStruct* ExpectedStruct)
+	FInstancedStruct CreateStruct(const FName Serializer, const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer)
 	{
-		if (!IsValid(ExpectedStruct))
-		{
-			return {};
-		}
-
-		const UScriptStruct* StructType = Cast<UScriptStruct>(Flake.Struct.TryLoad());
-
-		if (!IsValid(StructType))
-		{
-			return {};
-		}
-
-		if (!StructType->IsChildOf(ExpectedStruct))
-		{
-			return {};
-		}
+		if (!Private::VerifyStruct(Flake, ExpectedStruct)) return {};
 
 		FInstancedStruct CreatedStruct;
-		CreatedStruct.InitializeAs(StructType);
+		CreatedStruct.InitializeAs(Cast<UScriptStruct>(Flake.Struct.TryLoad()));
 
 		FWriteOptions Options;
 		Options.ExecPostLoadOrPostScriptConstruct = true;
 
-		WriteStruct(Serializer, CreatedStruct, Flake, Options);
+		WriteStruct(Serializer, CreatedStruct, Flake, Outer, Options);
 
 		return CreatedStruct;
 	}
 
 	UObject* CreateObject(const FName Serializer, const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass)
 	{
-		if (!IsValid(ExpectedClass) || ExpectedClass->IsChildOf<AActor>())
+		if (!Private::VerifyStruct(Flake, ExpectedClass)) return nullptr;
+
+		// @todo handle explicit Actor deserialization in a separate function
+		/*
+		if (ExpectedClass->IsChildOf<AActor>())
+		{
+			return nullptr;
+		}
+		*/
+
+		const UClass* ObjClass = Cast<UClass>(Flake.Struct.TryLoad());
+
+		// Unlikely because we already called VerifyStruct
+		if (UNLIKELY(!IsValid(ObjClass)))
 		{
 			return nullptr;
 		}
 
-		const UClass* ObjClass = LoadClass<UObject>(nullptr, *Flake.Struct.ToString(), nullptr, LOAD_None, nullptr);
-
-		if (!IsValid(ObjClass))
-		{
-			return nullptr;
-		}
-
-		if (!ObjClass->IsChildOf(ExpectedClass))
-		{
-			return nullptr;
-		}
-
-		auto&& LoadedObject = NewObject<UObject>(Outer, ObjClass);
+		UObject* LoadedObject = NewObject<UObject>(Outer, ObjClass);
 
 		FWriteOptions Options;
 		Options.ExecPostLoadOrPostScriptConstruct = true;

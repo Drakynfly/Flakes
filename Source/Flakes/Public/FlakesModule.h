@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved..
 
 #pragma once
 
@@ -16,7 +16,7 @@ public:
 
 	/**     FLAKE SERIALIZATION API    **/
 
-	TArray<FName> GetAllProviderNames() const;
+	FLAKES_API TArray<FName> GetAllProviderNames() const;
 
 	FLAKES_API void AddSerializationProvider(TUniquePtr<Flakes::ISerializationProvider>&& Provider);
 	FLAKES_API void RemoveSerializationProvider(FName ProviderName);
