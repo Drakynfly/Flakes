@@ -8,7 +8,7 @@ const static FLazyName ModuleName("Flakes");
 
 FFlakesModule& FFlakesModule::Get()
 {
-	return FModuleManager::Get().GetModuleChecked<FFlakesModule>(ModuleName);
+	return FModuleManager::Get().LoadModuleChecked<FFlakesModule>(ModuleName);
 }
 
 void FFlakesModule::StartupModule()

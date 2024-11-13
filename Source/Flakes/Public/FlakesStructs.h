@@ -114,13 +114,13 @@ namespace Flakes
 	template <typename T>
 	T CreateStruct(const FFlake& Flake, UObject* Outer = nullptr)
 	{
-		return CreateStruct(Flake, Outer, T::StaticStruct()).template Get<T>();
+		return CreateStruct(Flake, T::StaticStruct(), Outer).template Get<T>();
 	}
 
 	template <typename T>
 	T* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackage())
 	{
-		return Cast<T>(CreateObject(Flake, Outer, T::StaticClass()));
+		return Cast<T>(CreateObject(Flake, T::StaticClass(), Outer));
 	}
 
 	/* Interface for using Providers dynamically from their FName. */
@@ -225,7 +225,7 @@ namespace Flakes
 		typename TSerializationProvider
 		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
 	>
-	void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer, const FWriteOptions Options = {})
+	void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer = nullptr, const FWriteOptions Options = {})
 	{
 		TArray<uint8> Raw;
 		Private::DecompressFlake(Flake, Raw);

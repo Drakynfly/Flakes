@@ -12,4 +12,4 @@ void FFlakesTestsModule::ShutdownModule()
 {
 }
 
-IMPLEMENT_MODULE(FFlakesTestsModule, Flakes)
+IMPLEMENT_MODULE(FFlakesTestsModule, FlakesTests)
