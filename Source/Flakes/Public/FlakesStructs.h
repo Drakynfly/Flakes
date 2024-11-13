@@ -3,8 +3,8 @@
 #pragma once
 
 #include "Concepts/BaseStructureProvider.h"
-#include "InstancedStruct.h"
-#include "StructView.h"
+#include "StructUtils/InstancedStruct.h"
+#include "StructUtils/StructView.h"
 
 #include "FlakesStructs.generated.h"
 

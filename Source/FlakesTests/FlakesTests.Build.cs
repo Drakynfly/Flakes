@@ -12,8 +12,7 @@ public class FlakesTests : ModuleRules
 			new []
 			{
 				"Core",
-				"Flakes",
-				"StructUtils"
+				"Flakes"
 			});
 
 		PrivateDependencyModuleNames.AddRange(
