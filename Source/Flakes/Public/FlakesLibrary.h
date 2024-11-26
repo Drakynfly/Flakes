@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "FlakesStructs.h"
+#include "FlakesInterface.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "FlakesLibrary.generated.h"
 

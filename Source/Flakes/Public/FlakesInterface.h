@@ -2,55 +2,12 @@
 
 #pragma once
 
+#include "FlakesData.h"
 #include "Concepts/BaseStructureProvider.h"
 #include "StructUtils/InstancedStruct.h"
 #include "StructUtils/StructView.h"
 
-#include "FlakesStructs.generated.h"
-
 DECLARE_LOG_CATEGORY_EXTERN(LogFlakes, Log, All)
-
-USTRUCT(BlueprintType)
-struct FLAKES_API FFlake
-{
-	GENERATED_BODY()
-
-	// This is either a UClass, or UScriptStruct.
-	UPROPERTY()
-	FSoftObjectPath Struct;
-
-	UPROPERTY()
-	TArray<uint8> Data;
-
-	friend FArchive& operator<<(FArchive& Ar, FFlake& Flake)
-	{
-		Ar << Flake.Struct;
-		Ar << Flake.Data;
-		return Ar;
-	}
-};
-
-USTRUCT()
-struct FLAKES_API FFlake_Actor : public FFlake
-{
-	GENERATED_BODY()
-
-	FFlake_Actor() {}
-
-	FFlake_Actor(const FFlake& Flake)
-	  : FFlake(Flake) {}
-
-	UPROPERTY()
-	FTransform Transform;
-
-	friend FArchive& operator<<(FArchive& Ar, FFlake_Actor& Flake)
-	{
-		Ar << Flake.Struct;
-		Ar << Flake.Data;
-		Ar << Flake.Transform;
-		return Ar;
-	}
-};
 
 namespace Flakes
 {
@@ -114,12 +71,12 @@ namespace Flakes
 
 	// Macro to declare a new provider. The implementations of ReadData and WriteData must be defined to match these signatures.
 #define SERIALIZATION_PROVIDER_HEADER(API, Name)\
+	static const FLazyName ProviderName(TEXT(#Name));\
 	struct API FSerializationProvider_##Name final : TSerializationProvider<FSerializationProvider_##Name>\
 	{\
 		virtual FName GetProviderName() override\
 		{\
-			static const FLazyName Name##SerializationProvider(TEXT(#Name));\
-			return Name##SerializationProvider;\
+			return ProviderName;\
 		}\
 		static void ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer = nullptr);\
 		static void ReadData(const UObject* Object, TArray<uint8>& OutData);\
@@ -127,11 +84,6 @@ namespace Flakes
 		static void WriteData(UObject* Object, const TArray<uint8>& Data);\
 	};\
 	using Type = FSerializationProvider_##Name;
-
-	namespace Binary
-	{
-		SERIALIZATION_PROVIDER_HEADER(FLAKES_API, Binary)
-	}
 
 	// Low-level non-template flake API
 	FLAKES_API FFlake MakeFlake(FName Serializer, const FConstStructView& Struct, const UObject* Outer = nullptr, FReadOptions Options = {});

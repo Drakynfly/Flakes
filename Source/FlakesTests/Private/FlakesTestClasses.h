@@ -12,14 +12,15 @@ struct FFlakesTestSimpleStruct
 
 	FFlakesTestSimpleStruct()
 	{
+		TestFloat = FMath::Rand();
 		TestVector = FMath::VRand() * FMath::Rand();
 	}
 
 	UPROPERTY()
-	float TestFloat = FMath::Rand();
+	float TestFloat = 0.f;
 
 	UPROPERTY()
-	FVector TestVector;
+	FVector TestVector = FVector::ZeroVector;
 
 	friend bool operator==(const FFlakesTestSimpleStruct& Lhs, const FFlakesTestSimpleStruct& RHS)
 	{

@@ -1,6 +1,7 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved..
 
 #include "FlakesModule.h"
+#include "Providers/FlakesBinarySerializer.h"
 
 #define LOCTEXT_NAMESPACE "FlakesModule"
 

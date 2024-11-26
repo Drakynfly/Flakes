@@ -21,6 +21,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "FlakesJson",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "FlakesTests",
 			"Type": "Editor",
 			"LoadingPhase": "Default"

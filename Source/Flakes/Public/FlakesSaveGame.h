@@ -2,10 +2,12 @@
 
 #pragma once
 
+#include "FlakesData.h"
 #include "GameFramework/SaveGame.h"
-#include "FlakesStructs.h"
 
 #include "FlakesSaveGame.generated.h"
+
+struct FInstancedStruct;
 
 /**
  *

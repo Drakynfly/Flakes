@@ -1,7 +1,7 @@
 // Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "FlakesModule.h"
-#include "FlakesStructs.h"
+#include "FlakesInterface.h"
 #include "FlakesTestClasses.h"
 #include "Misc/AutomationTest.h"
 

@@ -3,7 +3,11 @@
 #pragma once
 
 #include "Modules/ModuleManager.h"
-#include "FlakesStructs.h"
+
+namespace Flakes
+{
+	struct ISerializationProvider;
+}
 
 class FFlakesModule : public IModuleInterface
 {
