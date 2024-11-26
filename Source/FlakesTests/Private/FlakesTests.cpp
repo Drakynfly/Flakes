@@ -2,6 +2,7 @@
 
 #include "FlakesModule.h"
 #include "FlakesStructs.h"
+#include "FlakesTestClasses.h"
 #include "Misc/AutomationTest.h"
 
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(FlakesTests,
@@ -67,6 +68,39 @@ bool FlakesTests::RunTest(const FString& Parameters)
 		Flakes::WriteStruct(Backend, FStructView::Make(TestColor2), FlakeFromColor);
 
 		TestEqual("TestValueBack_Color", TestColor, TestColor2);
+	}
+
+	{
+		UFlakesTestSimpleObject* TestObject = NewObject<UFlakesTestSimpleObject>();
+		const FFlake FlakeFromObject = Flakes::MakeFlake(Backend, TestObject);
+
+		const UClass* Class = Cast<UClass>(FlakeFromObject.Struct.TryLoad());
+		const UClass* Class2 = UFlakesTestSimpleObject::StaticClass();
+
+		TestEqual<const UClass*>("TestUClass", Class, Class2);
+
+		UFlakesTestSimpleObject* TestObject2 = Flakes::CreateObject<UFlakesTestSimpleObject>(Backend, FlakeFromObject);
+
+		TestTrue("TestValueBack_SimpleObject", TestObject->Equals(TestObject2));
+	}
+
+	{
+		UFlakesTestComplexObject* TestObject3 = NewObject<UFlakesTestComplexObject>();
+		TestObject3->TestSimpleObject = NewObject<UFlakesTestSimpleObject>(TestObject3);
+		for (int32 i = 0; i < 10; ++i)
+		{
+			TestObject3->TestSimpleObjectArray.Add(NewObject<UFlakesTestSimpleObject>(TestObject3));
+		}
+		const FFlake FlakeFromObject = Flakes::MakeFlake(Backend, TestObject3);
+
+		const UClass* Class = Cast<UClass>(FlakeFromObject.Struct.TryLoad());
+		const UClass* Class2 = UFlakesTestComplexObject::StaticClass();
+
+		TestEqual<const UClass*>("TestUClass2", Class, Class2);
+
+		UFlakesTestComplexObject* TestObject4 = Flakes::CreateObject<UFlakesTestComplexObject>(Backend, FlakeFromObject);
+
+		TestTrue("TestValueBack_ComplexObject", TestObject3->Equals(TestObject4));
 	}
 
 	// All tests passed.

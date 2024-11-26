@@ -37,12 +37,14 @@ void FFlakesModule::RemoveSerializationProvider(const FName ProviderName)
 	SerializationProviders.Remove(ProviderName);
 }
 
-void FFlakesModule::UseSerializationProvider(const FName ProviderName, const FSerializationProviderExec& Exec) const
+bool FFlakesModule::UseSerializationProvider(const FName ProviderName, const FSerializationProviderExec& Exec) const
 {
 	if (const TUniquePtr<Flakes::ISerializationProvider>* Found = SerializationProviders.Find(ProviderName))
 	{
 		Exec(Found->Get());
+		return true;
 	}
+	return false;
 }
 
 #undef LOCTEXT_NAMESPACE

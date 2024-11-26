@@ -80,49 +80,6 @@ namespace Flakes
 		FLAKES_API void PostLoadUObject(UObject* Object);
 	}
 
-	// Low-level binary-only flake API
-	FLAKES_API FFlake MakeFlake(const FConstStructView& Struct, const UObject* Outer, const FReadOptions Options = {});
-	FLAKES_API FFlake MakeFlake(const UObject* Object, const FReadOptions Options = {});
-	FLAKES_API void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer = nullptr);
-	FLAKES_API void WriteObject(UObject* Object, const FFlake& Flake);
-	FLAKES_API FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer = nullptr);
-	FLAKES_API UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer = nullptr);
-
-	template <
-		typename T
-		UE_REQUIRES(TModels_V<CBaseStructureProvider, T>)
-	>
-	FFlake MakeFlake(const T& Struct)
-	{
-		return MakeFlake(FConstStructView::Make(Struct));
-	}
-
-	template <
-		typename T
-		UE_REQUIRES(TModels_V<CBaseStructureProvider, T>)
-	>
-	void WriteStruct(T& Struct, const FFlake& Flake)
-	{
-		if (Flake.Struct != TBaseStructure<T>::Get())
-		{
-			return;
-		}
-
-		WriteStruct(FStructView::Make(Struct), Flake);
-	}
-
-	template <typename T>
-	T CreateStruct(const FFlake& Flake, UObject* Outer = nullptr)
-	{
-		return CreateStruct(Flake, T::StaticStruct(), Outer).template Get<T>();
-	}
-
-	template <typename T>
-	T* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackage())
-	{
-		return Cast<T>(CreateObject(Flake, T::StaticClass(), Outer));
-	}
-
 	/* Interface for using Providers dynamically from their FName. */
 	struct ISerializationProvider : FVirtualDestructor, FNoncopyable
 	{
@@ -183,6 +140,14 @@ namespace Flakes
 	FLAKES_API void WriteObject(FName Serializer, UObject* Object, const FFlake& Flake, FWriteOptions Options = {});
 	FLAKES_API FInstancedStruct CreateStruct(FName Serializer, const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer = nullptr);
 	FLAKES_API UObject* CreateObject(FName Serializer, const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass);
+
+	template <
+		typename T
+	>
+	T* CreateObject(FName Serializer, const FFlake& Flake, UObject* Outer = GetTransientPackage())
+	{
+		return Cast<T>(CreateObject(Serializer, Flake, Outer, T::StaticClass()));
+	}
 
 	// Low-level templated flake API
 	template <

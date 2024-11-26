@@ -22,7 +22,7 @@ public:
 	FLAKES_API void RemoveSerializationProvider(FName ProviderName);
 
 	using FSerializationProviderExec = TFunctionRef<void(Flakes::ISerializationProvider*)>;
-	void UseSerializationProvider(FName ProviderName, const FSerializationProviderExec& Exec) const;
+	bool UseSerializationProvider(FName ProviderName, const FSerializationProviderExec& Exec) const;
 
 private:
 	TMap<FName, TUniquePtr<Flakes::ISerializationProvider>> SerializationProviders;

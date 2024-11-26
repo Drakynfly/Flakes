@@ -6,22 +6,22 @@
 
 void UFlakesSaveGame::SetObjectToSave(UObject* Obj)
 {
-	Flake = Flakes::MakeFlake(Obj);
+	Flake = Flakes::MakeFlake<Flakes::Binary::Type>(Obj);
 }
 
 void UFlakesSaveGame::SetStructToSave(const FInstancedStruct& Data)
 {
-	Flake = Flakes::MakeFlake(FConstStructView(Data), nullptr);
+	Flake = Flakes::MakeFlake<Flakes::Binary::Type>(FConstStructView(Data), nullptr);
 }
 
 UObject* UFlakesSaveGame::LoadObjectFromData(UObject* Outer) const
 {
-	return Flakes::CreateObject(Flake, UObject::StaticClass(), Outer);
+	return Flakes::CreateObject<Flakes::Binary::Type>(Flake, UObject::StaticClass(), Outer);
 }
 
 UObject* UFlakesSaveGame::LoadObjectFromDataClassChecked(UObject* Outer, const UClass* ExpectedClass) const
 {
-	if (auto&& Obj = Flakes::CreateObject(Flake, ExpectedClass, Outer))
+	if (auto&& Obj = Flakes::CreateObject<Flakes::Binary::Type>(Flake, ExpectedClass, Outer))
 	{
 		return Obj;
 	}

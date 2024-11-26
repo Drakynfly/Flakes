@@ -24,7 +24,7 @@ namespace Flakes
 	{
 		bool VerifyStruct(const FFlake& Flake, const UStruct* Expected)
 		{
-			if (!ensureMsgf(IsValid(Expected), TEXT("Invalid Expected Type. Prefer passing UObject::StaticClass(), over nullptr")))
+			if (!ensureMsgf(IsValid(Expected), TEXT("VerifyStruct: Invalid Expected Type. Prefer passing UObject::StaticClass(), over nullptr")))
 			{
 				return false;
 			}
@@ -32,11 +32,13 @@ namespace Flakes
 			const UStruct* StructType = Cast<UStruct>(Flake.Struct.TryLoad());
 			if (!IsValid(StructType))
 			{
+				UE_LOG(LogFlakes, Error, TEXT("VerifyStruct: Invalid Struct Type. Failed to load, or was null."));
 				return false;
 			}
 
 			if (!StructType->IsChildOf(Expected))
 			{
+				UE_LOG(LogFlakes, Error, TEXT("VerifyStruct: StructType does match Expected type"));
 				return false;
 			}
 
@@ -96,36 +98,6 @@ namespace Flakes
 		}
 	}
 
-	FFlake MakeFlake(const FConstStructView& Struct, const UObject* Outer, const FReadOptions Options)
-	{
-		return MakeFlake<Binary::Type>(Struct, Outer, Options);
-	}
-
-	FFlake MakeFlake(const UObject* Object, const FReadOptions Options)
-	{
-		return MakeFlake<Binary::Type>(Object, Options);
-	}
-
-	void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer)
-	{
-		WriteStruct<Binary::Type>(Struct, Flake, Outer);
-	}
-
-	void WriteObject(UObject* Object, const FFlake& Flake)
-	{
-		WriteObject<Binary::Type>(Object, Flake);
-	}
-
-	FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer)
-	{
-		return CreateStruct<Binary::Type>(Flake, ExpectedStruct, Outer);
-	}
-
-	UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer)
-	{
-		return CreateObject<Binary::Type>(Flake, ExpectedClass, Outer);
-	}
-
 	namespace Binary
 	{
 		void FSerializationProvider_Binary::ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer)
@@ -172,11 +144,15 @@ namespace Flakes
 
 		if (Struct.IsValid())
 		{
-			FFlakesModule::Get().UseSerializationProvider(Serializer,
+			if (!FFlakesModule::Get().UseSerializationProvider(Serializer,
 				[&](ISerializationProvider* Provider)
 				{
 					Provider->Virtual_ReadData(Struct, Raw, Outer);
-				});
+				}))
+			{
+				UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+				return FFlake();
+			}
 		}
 
 		FFlake Flake;
@@ -196,11 +172,15 @@ namespace Flakes
 
 		TArray<uint8> Raw;
 
-		FFlakesModule::Get().UseSerializationProvider(Serializer,
+		if (!FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
 			{
 				Provider->Virtual_ReadData(Object, Raw);
-			});
+			}))
+		{
+			UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+			return FFlake();
+		}
 
 		Private::CompressFlake(Flake, Raw, Options.Compressor, Options.CompressionLevel);
 
@@ -212,11 +192,15 @@ namespace Flakes
 		TArray<uint8> Raw;
 		Private::DecompressFlake(Flake, Raw);
 
-		FFlakesModule::Get().UseSerializationProvider(Serializer,
+		if (!FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
 			{
 				Provider->Virtual_WriteData(Struct, Raw, Outer);
-			});
+			}))
+		{
+			UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+			return;
+		}
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
 		{
@@ -229,11 +213,15 @@ namespace Flakes
 		TArray<uint8> Raw;
 		Private::DecompressFlake(Flake, Raw);
 
-		FFlakesModule::Get().UseSerializationProvider(Serializer,
+		if (!FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
 			{
 				Provider->Virtual_WriteData(Object, Raw);
-			});
+			}))
+		{
+			UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+			return;
+		}
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
 		{
