@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "FlakesTestsModule.h"
 
