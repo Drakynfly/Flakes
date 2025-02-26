@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include "Serialization/MemoryReader.h"
+#include "Serialization/MemoryWriter.h"
+
 namespace Flakes
 {
 	class FLAKES_API FRecursiveMemoryWriter : public FMemoryWriter

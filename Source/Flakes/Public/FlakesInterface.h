@@ -2,10 +2,13 @@
 
 #pragma once
 
-#include "FlakesData.h"
+#include "Compression/OodleDataCompression.h"
 #include "Concepts/BaseStructureProvider.h"
+#include "FlakesData.h"
+#include "GameFramework/Actor.h"
 #include "StructUtils/InstancedStruct.h"
 #include "StructUtils/StructView.h"
+#include "UObject/Package.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogFlakes, Log, All)
 

@@ -24,7 +24,7 @@ public class Flakes : ModuleRules
 
 	public static void ApplySharedModuleSetup(ModuleRules Module, ReadOnlyTargetRules Target)
 	{
-		Module.PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		Module.PCHUsage = PCHUsageMode.NoPCHs;
 		Module.DefaultBuildSettings = BuildSettingsVersion.Latest;
 		Module.IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 

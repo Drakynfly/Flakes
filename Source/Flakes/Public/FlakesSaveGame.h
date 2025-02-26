@@ -4,6 +4,7 @@
 
 #include "FlakesData.h"
 #include "GameFramework/SaveGame.h"
+#include "UObject/Package.h"
 
 #include "FlakesSaveGame.generated.h"
 

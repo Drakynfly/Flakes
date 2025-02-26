@@ -1,6 +1,8 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "FlakesMemory.h"
+#include "UObject/Object.h"
+#include "UObject/SoftObjectPath.h"
 
 namespace Flakes
 {

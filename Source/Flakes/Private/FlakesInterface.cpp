@@ -4,6 +4,11 @@
 #include "FlakesModule.h"
 
 #include "Compression/OodleDataCompressionUtil.h"
+#include "GameFramework/Actor.h"
+
+#if WITH_EDITOR
+#include "HAL/IConsoleManager.h"
+#endif
 
 DEFINE_LOG_CATEGORY(LogFlakes)
 
