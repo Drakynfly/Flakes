@@ -61,6 +61,12 @@ namespace Flakes::Json
 				{
 					const UObject* Object = ObjectProperty->GetObjectPropertyValue(Value);
 
+					if (Outer->HasAnyFlags(RF_WasLoaded | RF_LoadCompleted))
+					{
+						// Outer is loaded from disk, don't export full subobjects
+						return nullptr;
+					}
+
 					// If we own the NodeObject, export by recursing over its data, e.g., export the full object data.
 					if (IsValid(Object) && Object->IsInOuter(Outer))
 					{
@@ -74,13 +80,6 @@ namespace Flakes::Json
 							JsonObject->Type = EJson::Object;
 							return JsonObject;
 						}
-					}
-					// If it's a reference, export the object path.
-					else
-					{
-						FString StringValue;
-						Property->ExportTextItem_Direct(StringValue, Value, nullptr, nullptr, PPF_None);
-						return MakeShared<FJsonValueString>(StringValue);
 					}
 				}
 
