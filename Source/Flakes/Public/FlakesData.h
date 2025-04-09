@@ -29,7 +29,7 @@ struct FLAKES_API FFlake_Actor : public FFlake
 {
 	GENERATED_BODY()
 
-	FFlake_Actor() {}
+	FFlake_Actor() = default;
 
 	FFlake_Actor(const FFlake& Flake)
 	  : FFlake(Flake) {}
