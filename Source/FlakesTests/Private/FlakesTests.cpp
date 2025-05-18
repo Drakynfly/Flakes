@@ -71,7 +71,7 @@ bool FlakesTests::RunTest(const FString& Parameters)
 	}
 
 	{
-		UFlakesTestSimpleObject* TestObject = NewObject<UFlakesTestSimpleObject>();
+		UFlakesTestSimpleObject* TestObject = UFlakesTestSimpleObject::New();
 		const FFlake FlakeFromObject = Flakes::MakeFlake(Backend, TestObject);
 
 		const UClass* Class = Cast<UClass>(FlakeFromObject.Struct.TryLoad());
@@ -86,7 +86,7 @@ bool FlakesTests::RunTest(const FString& Parameters)
 
 	{
 		UFlakesTestComplexObject* TestObject3 = NewObject<UFlakesTestComplexObject>();
-		TestObject3->TestSimpleObject = NewObject<UFlakesTestSimpleObject>(TestObject3);
+		TestObject3->TestSimpleObject = UFlakesTestSimpleObject::New(TestObject3);
 		for (int32 i = 0; i < 10; ++i)
 		{
 			TestObject3->TestSimpleObjectArray.Add(NewObject<UFlakesTestSimpleObject>(TestObject3));

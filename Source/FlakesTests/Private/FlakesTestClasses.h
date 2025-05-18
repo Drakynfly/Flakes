@@ -10,17 +10,19 @@ struct FFlakesTestSimpleStruct
 {
 	GENERATED_BODY()
 
-	FFlakesTestSimpleStruct()
-	{
-		TestFloat = FMath::Rand();
-		TestVector = FMath::VRand() * FMath::Rand();
-	}
-
 	UPROPERTY()
 	float TestFloat = 0.f;
 
 	UPROPERTY()
 	FVector TestVector = FVector::ZeroVector;
+
+	static FFlakesTestSimpleStruct Rand()
+	{
+		FFlakesTestSimpleStruct Struct;
+		Struct.TestFloat = FMath::FRand() * FMath::Rand();
+        Struct.TestVector = FMath::VRand() * FMath::Rand();
+		return Struct;
+	}
 
 	friend bool operator==(const FFlakesTestSimpleStruct& Lhs, const FFlakesTestSimpleStruct& RHS)
 	{
@@ -44,13 +46,22 @@ class UFlakesTestSimpleObject : public UObject
 
 public:
 	UPROPERTY()
-	float TestFloat = FMath::Rand();
+	float TestFloat = 0.f;
 
 	UPROPERTY()
-	FVector TestVector = FMath::VRand() * FMath::Rand();
+	FVector TestVector = FVector::ZeroVector;
 
 	UPROPERTY()
 	FFlakesTestSimpleStruct TestStruct;
+
+	static UFlakesTestSimpleObject* New(UObject* Outer = (UObject*)GetTransientPackage())
+	{
+		UFlakesTestSimpleObject* SimpleObject = NewObject<UFlakesTestSimpleObject>(Outer);
+		SimpleObject->TestFloat = FMath::FRand() * FMath::Rand();
+		SimpleObject->TestVector = FMath::VRand() * FMath::Rand();
+		SimpleObject->TestStruct = FFlakesTestSimpleStruct::Rand();
+		return SimpleObject;
+	}
 
 	bool Equals(const UFlakesTestSimpleObject* TestObject2) const;
 };
