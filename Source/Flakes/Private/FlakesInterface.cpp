@@ -1,6 +1,7 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "FlakesInterface.h"
+#include "FlakesLogging.h"
 #include "FlakesModule.h"
 
 #include "Compression/OodleDataCompressionUtil.h"
@@ -9,8 +10,6 @@
 #if WITH_EDITOR
 #include "HAL/IConsoleManager.h"
 #endif
-
-DEFINE_LOG_CATEGORY(LogFlakes)
 
 #if WITH_EDITOR
 TAutoConsoleVariable<bool> CVarLogCompressionStatistics{
@@ -24,21 +23,21 @@ namespace Flakes
 {
 	namespace Private
 	{
-		bool VerifyStruct(const FFlake& Flake, const UStruct* Expected)
+		bool VerifyStruct(const FFlake& Flake, const UStruct* Expected, UStruct*& OutStruct)
 		{
 			if (!ensureMsgf(IsValid(Expected), TEXT("VerifyStruct: Invalid Expected Type. Prefer passing UObject::StaticClass(), over nullptr")))
 			{
 				return false;
 			}
 
-			const UStruct* StructType = Cast<UStruct>(Flake.Struct.TryLoad());
-			if (!IsValid(StructType))
+			OutStruct = Cast<UStruct>(Flake.Struct.TryLoad());
+			if (!IsValid(OutStruct))
 			{
 				UE_LOG(LogFlakes, Error, TEXT("VerifyStruct: Invalid Struct Type. Failed to load, or was null."));
 				return false;
 			}
 
-			if (!StructType->IsChildOf(Expected))
+			if (!OutStruct->IsChildOf(Expected))
 			{
 				UE_LOG(LogFlakes, Error, TEXT("VerifyStruct: StructType does match Expected type"));
 				return false;
@@ -47,34 +46,58 @@ namespace Flakes
 			return true;
 		}
 
-		void CompressFlake(FFlake& Flake, const TArray<uint8>& Raw,
-						   const FOodleDataCompression::ECompressor Compressor,
-						   const FOodleDataCompression::ECompressionLevel CompressionLevel)
+		bool CompressFlake(FFlake& Flake, TArray<uint8>&& Raw, const FReadOptions& Options)
 		{
+			if (Options.CompressionLevel == FOodleDataCompression::ECompressionLevel::None)
+			{
+				Flake.Data = MoveTemp(Raw);
+				return true;
+			}
+
 #if WITH_EDITOR
-			const auto BeforeCompression = Raw.Num();
+			const auto BeforeCompression = Raw.NumBytes();
 #endif
 
-			FOodleCompressedArray::CompressTArray(Flake.Data, Raw, Compressor, CompressionLevel);
-
-#if WITH_EDITOR
-			const auto AfterCompression = Flake.Data.Num();
-			if (CVarLogCompressionStatistics.GetValueOnGameThread())
+			const bool Success = FOodleCompressedArray::CompressTArray(Flake.Data, Raw, Options.Compressor, Options.CompressionLevel);
+			if (!Success)
 			{
-				UE_LOG(LogFlakes, Log, TEXT("[Flake Compression Log]: Compressed '%i' bytes to '%i' bytes"), BeforeCompression, AfterCompression);
+				UE_LOG(LogFlakes, Error, TEXT("CompressFlake failed!"))
+			}
+#if WITH_EDITOR
+			else
+			{
+				const auto AfterCompression = Flake.Data.NumBytes();
+				if (CVarLogCompressionStatistics.GetValueOnGameThread())
+				{
+					UE_LOG(LogFlakes, Log, TEXT("[Flake Compression Log]: Compressed '%llu' bytes to '%llu' bytes"), BeforeCompression, AfterCompression);
+				}
 			}
 #endif
+
+			return Success;
 		}
 
-		void DecompressFlake(const FFlake& Flake, TArray<uint8>& Raw)
+		bool DecompressFlake(const FFlake& Flake, TArray<uint8>& Raw, const FWriteOptions& Options)
 		{
-			FOodleCompressedArray::DecompressToTArray(Raw, Flake.Data);
+			if (Options.SkipDecompressionStep)
+			{
+				// @todo remove this copy please
+				Raw = Flake.Data;
+				return true;
+			}
+
+			const bool Success = FOodleCompressedArray::DecompressToTArray(Raw, Flake.Data);
+			if (!Success)
+			{
+				UE_LOG(LogFlakes, Error, TEXT("DecompressFlake failed!"))
+			}
+			return Success;
 		}
 
 		void PostLoadStruct(const FStructView& Struct)
 		{
 			check(Struct.GetScriptStruct())
-			auto StructOps = Struct.GetScriptStruct()->GetCppStructOps();
+			UScriptStruct::ICppStructOps* StructOps = Struct.GetScriptStruct()->GetCppStructOps();
 			if (StructOps->HasPostScriptConstruct())
 			{
 				StructOps->PostScriptConstruct(Struct.GetMemory());
@@ -120,7 +143,11 @@ namespace Flakes
 		FFlake Flake;
 		Flake.Struct = Struct.GetScriptStruct();
 
-		Private::CompressFlake(Flake, Raw, Options.Compressor, Options.CompressionLevel);
+#if WITH_EDITOR
+		Flake.DebugString = BytesToString(Raw.GetData(), Raw.Num());
+#endif
+
+		(void)Private::CompressFlake(Flake, MoveTemp(Raw), Options);
 
 		return Flake;
 	}
@@ -144,7 +171,11 @@ namespace Flakes
 			return FFlake();
 		}
 
-		Private::CompressFlake(Flake, Raw, Options.Compressor, Options.CompressionLevel);
+#if WITH_EDITOR
+		Flake.DebugString = BytesToString(Raw.GetData(), Raw.Num());
+#endif
+
+		(void)Private::CompressFlake(Flake, MoveTemp(Raw), Options);
 
 		return Flake;
 	}
@@ -152,7 +183,10 @@ namespace Flakes
 	void WriteStruct(const FName Serializer, const FStructView& Struct, const FFlake& Flake, UObject* Outer, const FWriteOptions Options)
 	{
 		TArray<uint8> Raw;
-		Private::DecompressFlake(Flake, Raw);
+		if (!Private::DecompressFlake(Flake, Raw, Options))
+		{
+			return;
+		}
 
 		if (!FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
@@ -173,7 +207,10 @@ namespace Flakes
 	void WriteObject(const FName Serializer, UObject* Object, const FFlake& Flake, const FWriteOptions Options)
 	{
 		TArray<uint8> Raw;
-		Private::DecompressFlake(Flake, Raw);
+		if (!Private::DecompressFlake(Flake, Raw, Options))
+		{
+			return;
+		}
 
 		if (!FFlakesModule::Get().UseSerializationProvider(Serializer,
 			[&](ISerializationProvider* Provider)
@@ -191,24 +228,22 @@ namespace Flakes
 		}
 	}
 
-	FInstancedStruct CreateStruct(const FName Serializer, const FFlake& Flake, const UScriptStruct* ExpectedStruct, UObject* Outer)
+	FInstancedStruct CreateStruct(const FName Serializer, const FFlake& Flake, const UScriptStruct* ExpectedStruct, const FWriteOptions Options, UObject* Outer)
 	{
-		if (!Private::VerifyStruct(Flake, ExpectedStruct)) return {};
+		UStruct* Struct = nullptr;
+		if (!Private::VerifyStruct(Flake, ExpectedStruct, Struct)) return {};
 
 		FInstancedStruct CreatedStruct;
-		CreatedStruct.InitializeAs(Cast<UScriptStruct>(Flake.Struct.TryLoad()));
-
-		FWriteOptions Options;
-		Options.ExecPostLoadOrPostScriptConstruct = true;
-
+		CreatedStruct.InitializeAs(Cast<UScriptStruct>(Struct));
 		WriteStruct(Serializer, CreatedStruct, Flake, Outer, Options);
 
 		return CreatedStruct;
 	}
 
-	UObject* CreateObject(const FName Serializer, const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass)
+	UObject* CreateObject(const FName Serializer, const FFlake& Flake, UObject* Outer, const UClass* ExpectedClass, const FWriteOptions Options)
 	{
-		if (!Private::VerifyStruct(Flake, ExpectedClass)) return nullptr;
+		UStruct* Struct = nullptr;
+		if (!Private::VerifyStruct(Flake, ExpectedClass, Struct)) return nullptr;
 
 		// @todo handle explicit Actor deserialization in a separate function
 		/*
@@ -218,7 +253,7 @@ namespace Flakes
 		}
 		*/
 
-		const UClass* ObjClass = Cast<UClass>(Flake.Struct.TryLoad());
+		const UClass* ObjClass = Cast<UClass>(Struct);
 
 		// Unlikely because we already called VerifyStruct
 		if (UNLIKELY(!IsValid(ObjClass)))
@@ -227,10 +262,6 @@ namespace Flakes
 		}
 
 		UObject* LoadedObject = NewObject<UObject>(Outer, ObjClass);
-
-		FWriteOptions Options;
-		Options.ExecPostLoadOrPostScriptConstruct = true;
-
 		WriteObject(Serializer, LoadedObject, Flake, Options);
 
 		return LoadedObject;

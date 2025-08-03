@@ -57,5 +57,5 @@ public:
 
 	/** Get the size of the data payload in a flake */
 	UFUNCTION(BlueprintPure, Category = "Flakes|FlakeLibrary")
-	static int32 GetNumBytes(const FFlake& Flake);
+	static int64 GetNumBytes(const FFlake& Flake);
 };

@@ -1,6 +1,7 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "Providers/FlakesBinarySerializer.h"
+#include "FlakesLogging.h"
 #include "FlakesMemory.h"
 
 namespace Flakes::Binary
@@ -13,6 +14,12 @@ namespace Flakes::Binary
 		// SerializeItem is a bidirectional serializer, so it doesn't.
 		const_cast<UScriptStruct*>(Struct.GetScriptStruct())->SerializeItem(MemoryWriter,
 			const_cast<uint8*>(Struct.GetMemory()), nullptr);
+
+		if (MemoryWriter.IsError())
+		{
+			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::ReadData failed to serialized struct!"));
+		}
+
 		MemoryWriter.FlushCache();
 		MemoryWriter.Close();
 	}
@@ -21,6 +28,12 @@ namespace Flakes::Binary
 	{
 		FRecursiveMemoryWriter MemoryWriter(OutData, Object);
 		const_cast<UObject*>(Object)->Serialize(MemoryWriter);
+
+		if (MemoryWriter.IsError())
+		{
+			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::ReadData failed to serialized object!"));
+		}
+
 		MemoryWriter.FlushCache();
 		MemoryWriter.Close();
 	}
@@ -30,6 +43,12 @@ namespace Flakes::Binary
 		FRecursiveMemoryReader MemoryReader(Data, true, Outer);
 		// For some reason, SerializeItem is not const, so we have to const_cast the ScriptStruct
 		const_cast<UScriptStruct*>(Struct.GetScriptStruct())->SerializeItem(MemoryReader, Struct.GetMemory(), nullptr);
+
+		if (MemoryReader.IsError())
+		{
+			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::WriteData failed to serialized struct!"));
+		}
+
 		MemoryReader.FlushCache();
 		MemoryReader.Close();
 	}
@@ -38,6 +57,12 @@ namespace Flakes::Binary
 	{
 		FRecursiveMemoryReader MemoryReader(Data, true, Object);
 		Object->Serialize(MemoryReader);
+
+		if (MemoryReader.IsError())
+		{
+			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::WriteData failed to serialized object!"));
+		}
+
 		MemoryReader.FlushCache();
 		MemoryReader.Close();
 	}

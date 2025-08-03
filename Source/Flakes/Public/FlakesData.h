@@ -16,10 +16,18 @@ struct FLAKES_API FFlake
 	UPROPERTY()
 	TArray<uint8> Data;
 
+#if WITH_EDITORONLY_DATA
+	UPROPERTY()
+	FString DebugString;
+#endif
+
 	friend FArchive& operator<<(FArchive& Ar, FFlake& Flake)
 	{
 		Ar << Flake.Struct;
 		Ar << Flake.Data;
+#if WITH_EDITOR
+		Ar << Flake.DebugString;
+#endif
 		return Ar;
 	}
 };

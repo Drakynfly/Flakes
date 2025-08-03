@@ -19,7 +19,8 @@ public class FlakesTests : ModuleRules
 			new []
 			{
 				"CoreUObject",
-				"Engine"
+				"Engine",
+				"GameplayTags",
 			});
 	}
 }

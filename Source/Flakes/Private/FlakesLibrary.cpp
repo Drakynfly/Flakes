@@ -55,9 +55,10 @@ AActor* UFlakesLibrary::ConstructActorFromFlake(const FFlake_Actor& Flake, UObje
 		return nullptr;
 	}
 
-	if (!Flakes::Private::VerifyStruct(Flake, ExpectedClass)) return nullptr;
+	UStruct* Struct = nullptr;
+	if (!Flakes::Private::VerifyStruct(Flake, ExpectedClass, Struct)) return nullptr;
 
-	const TSubclassOf<AActor> ActorClass = Cast<UClass>(Flake.Struct.TryLoad());
+	const TSubclassOf<AActor> ActorClass = Cast<UClass>(Struct);
 
 	// Unlikely because we already called VerifyStruct
 	if (UNLIKELY(!IsValid(ActorClass)))
@@ -77,7 +78,7 @@ AActor* UFlakesLibrary::ConstructActorFromFlake(const FFlake_Actor& Flake, UObje
 	return nullptr;
 }
 
-int32 UFlakesLibrary::GetNumBytes(const FFlake& Flake)
+int64 UFlakesLibrary::GetNumBytes(const FFlake& Flake)
 {
-	return Flake.Data.Num();
+	return static_cast<int64>(Flake.Data.NumBytes());
 }

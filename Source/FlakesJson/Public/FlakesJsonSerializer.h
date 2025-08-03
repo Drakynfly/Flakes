@@ -10,9 +10,9 @@
 
 namespace Flakes::Json
 {
-	SERIALIZATION_PROVIDER_HEADER(FLAKESJSON_API, Json)
+	SERIALIZATION_PROVIDER_HEADER(FLAKESJSON_API, Json, Regular)
+	SERIALIZATION_PROVIDER_HEADER(FLAKESJSON_API, PrettyJson, Pretty)
 }
-
 
 UCLASS()
 class FLAKESJSON_API UFlakesJsonLibrary : public UBlueprintFunctionLibrary

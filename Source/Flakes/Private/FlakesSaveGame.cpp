@@ -1,6 +1,7 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "FlakesSaveGame.h"
+#include "FlakesLogging.h"
 #include "Providers/FlakesBinarySerializer.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(FlakesSaveGame)

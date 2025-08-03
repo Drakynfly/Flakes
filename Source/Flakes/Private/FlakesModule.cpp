@@ -1,7 +1,9 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved..
 
 #include "FlakesModule.h"
+#include "Modules/ModuleManager.h"
 #include "Providers/FlakesBinarySerializer.h"
+#include "Providers/FlakesNetBinarySerializer.h"
 
 #define LOCTEXT_NAMESPACE "FlakesModule"
 
@@ -15,6 +17,7 @@ FFlakesModule& FFlakesModule::Get()
 void FFlakesModule::StartupModule()
 {
 	AddSerializationProvider(MakeUnique<Flakes::Binary::Type>());
+	AddSerializationProvider(MakeUnique<Flakes::NetBinary::Type>());
 }
 
 void FFlakesModule::ShutdownModule()

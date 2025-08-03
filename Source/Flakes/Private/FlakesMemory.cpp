@@ -1,6 +1,8 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "FlakesMemory.h"
+#include "FlakesLogging.h"
+#include "Engine/World.h"
 #include "UObject/Object.h"
 #include "UObject/SoftObjectPath.h"
 
@@ -11,30 +13,41 @@ namespace Flakes
 		None,
 
 		// Direct sub-objects are serialized with us
-		Internal,
+		Exported,
 
 		// Any other object reference is treated as a SoftObjectRef
-		External,
+		Reference,
 	};
 
 	FArchive& FRecursiveMemoryWriter::operator<<(UObject*& Obj)
 	{
-		// Don't serialize nulls, or things we are already writing
-		if (!IsValid(Obj) ||
-			OuterStack.Contains(Obj))
+		// Don't serialize nulls
+		if (!IsValid(Obj))
 		{
 			return *this;
 		}
 
 		ERecursiveMemoryObj Op = ERecursiveMemoryObj::None;
 
-		if (Obj->GetOuter() == OuterStack.Last())
+		/*
+		 * Conditions for being exports are either:
+		 * 1. Being owned by something that is already being exported, or
+		 * 2. Being owned by a world, and therefor is not an asset from disk.
+		 */
+		const bool ShouldExport =
+			OuterStack.Contains(Obj->GetOuter()) ||
+			Obj->GetTypedOuter<UWorld>();
+
+		// If this object is already being exported, then prevent additional exports.
+		const bool CannotExport = ExportedObjects.Contains(Obj);
+
+		if (ShouldExport && !CannotExport)
 		{
-			Op = ERecursiveMemoryObj::Internal;
+			Op = ERecursiveMemoryObj::Exported;
 		}
 		else
 		{
-			Op = ERecursiveMemoryObj::External;
+			Op = ERecursiveMemoryObj::Reference;
 		}
 
 		*this << Op;
@@ -43,17 +56,24 @@ namespace Flakes
 		{
 		case ERecursiveMemoryObj::None:
 			break;
-		case ERecursiveMemoryObj::Internal:
+		case ERecursiveMemoryObj::Exported:
 			{
 				FSoftClassPath Class(Obj->GetClass());
 				*this << Class;
+				/*
+				FString ObjectName(Obj->GetName());
+				*this << ObjectName;
+				*/
+
+				// Track this export, so we do not export twice.
+				ExportedObjects.Push(Obj);
 
 				OuterStack.Push(Obj); // Track that we are serializing this object
 				Obj->Serialize(*this);
 				OuterStack.Pop(); // Untrack the object
 			}
 			break;
-		case ERecursiveMemoryObj::External:
+		case ERecursiveMemoryObj::Reference:
 			{
 				FSoftObjectPath ExternalRef = Obj;
 				*this << ExternalRef;
@@ -101,21 +121,35 @@ namespace Flakes
 
 		switch (Op)
 		{
-		case ERecursiveMemoryObj::Internal:
+		case ERecursiveMemoryObj::Exported:
 			{
 				FSoftClassPath Class;
 				*this << Class;
+				/*
+				FName ObjectName;
+				*this << ObjectName;
+				*/
 
-				if (const UClass* ObjClass = Class.TryLoadClass<UObject>())
+				if (Class.IsNull())
 				{
-					Obj = NewObject<UObject>(OuterStack.Last(), ObjClass);
+					UE_LOG(LogFlakes, Error, TEXT("FRecursiveMemoryReader failed to load Class: Null Path"))
+					SetError();
+				}
+				else if (const UClass* ObjClass = Class.TryLoadClass<UObject>())
+				{
+					Obj = NewObject<UObject>(OuterStack.Last(), ObjClass/*, ObjectName*/);
 					OuterStack.Push(Obj);
 					Obj->Serialize(*this);
 					OuterStack.Pop();
 				}
+				else
+				{
+					UE_LOG(LogFlakes, Error, TEXT("FRecursiveMemoryReader failed to load Class: '%s'"), *Class.ToString())
+					SetError();
+				}
 			}
 			break;
-		case ERecursiveMemoryObj::External:
+		case ERecursiveMemoryObj::Reference:
 			{
 				FSoftObjectPath ExternalRef;
 				*this << ExternalRef;

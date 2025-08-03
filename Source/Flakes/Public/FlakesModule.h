@@ -2,7 +2,11 @@
 
 #pragma once
 
-#include "Modules/ModuleManager.h"
+#include "Containers/Map.h"
+#include "Modules/ModuleInterface.h"
+#include "Templates/Function.h"
+#include "Templates/UniquePtr.h"
+#include "UObject/NameTypes.h"
 
 namespace Flakes
 {

@@ -29,6 +29,7 @@ namespace Flakes
 		// Tracks what objects are currently being serialized. This allows us to only serialize UObjects that are directly
 		// owned *and* stored in the first outer.
 		TArray<const UObject*> OuterStack;
+		TArray<UObject*> ExportedObjects;
 	};
 
 	class FLAKES_API FRecursiveMemoryReader : public FMemoryReader
