@@ -75,6 +75,9 @@ namespace Flakes
 		}
 	};
 
+	template<typename T>
+	concept CSerializationProvider = TIsDerivedFrom<typename TRemoveReference<T>::Type, ISerializationProvider>::Value;
+
 	// Macro to declare a new provider. The implementations of ReadData and WriteData must be defined to match these signatures.
 #define SERIALIZATION_PROVIDER_HEADER(API, Name, Pseudonym)\
 	struct API FSerializationProvider_##Name final : TSerializationProvider<FSerializationProvider_##Name>\
@@ -108,10 +111,7 @@ namespace Flakes
 	}
 
 	// Low-level templated flake API
-	template <
-		typename TSerializationProvider
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T>
 	FFlake MakeFlake(const FConstStructView& Struct, const UObject* Outer, const FReadOptions Options = {})
 	{
 		check(Struct.IsValid())
@@ -120,7 +120,7 @@ namespace Flakes
 		Flake.Struct = Struct.GetScriptStruct();
 
 		TArray<uint8> Raw;
-		TSerializationProvider::ReadData(Struct, Raw, Outer);
+		T::ReadData(Struct, Raw, Outer);
 
 #if WITH_EDITOR
 		Flake.DebugString = BytesToString(Raw.GetData(), Raw.Num());
@@ -131,10 +131,7 @@ namespace Flakes
 		return Flake;
 	}
 
-	template <
-		typename TSerializationProvider
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T>
 	FFlake MakeFlake(const UObject* Object, const FReadOptions Options = {})
 	{
 		check(Object && !Object->IsA<AActor>());
@@ -143,7 +140,7 @@ namespace Flakes
 		Flake.Struct = Object->GetClass();
 
 		TArray<uint8> Raw;
-		TSerializationProvider::ReadData(Object, Raw);
+		T::ReadData(Object, Raw);
 
 #if WITH_EDITOR
 		Flake.DebugString = BytesToString(Raw.GetData(), Raw.Num());
@@ -154,20 +151,13 @@ namespace Flakes
 		return Flake;
 	}
 
-	template <
-		typename TSerializationProvider,
-		typename TStruct
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T, typename TStruct>
 	FFlake MakeFlake(const TStruct& Struct, const UObject* Outer, const FReadOptions Options = {})
 	{
-		return MakeFlake<TSerializationProvider>(FConstStructView::Make(Struct), Outer, Options);
+		return MakeFlake<T>(FConstStructView::Make(Struct), Outer, Options);
 	}
 
-	template <
-		typename TSerializationProvider
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T>
 	void WriteStruct(const FStructView& Struct, const FFlake& Flake, UObject* Outer, const FWriteOptions Options = {})
 	{
 		TArray<uint8> Raw;
@@ -176,7 +166,7 @@ namespace Flakes
 			return;
 		}
 
-		TSerializationProvider::WriteData(Struct, Raw, Outer);
+		T::WriteData(Struct, Raw, Outer);
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
 		{
@@ -184,20 +174,13 @@ namespace Flakes
 		}
 	}
 
-	template <
-		typename TSerializationProvider,
-		typename TStruct
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T, typename TStruct>
 	void WriteStruct(TStruct& Struct, const FFlake& Flake, UObject* Outer, const FWriteOptions Options = {})
 	{
-		WriteStruct<TSerializationProvider>(FStructView::Make(Struct), Flake, Outer, Options);
+		WriteStruct<T>(FStructView::Make(Struct), Flake, Outer, Options);
 	}
 
-	template <
-		typename TSerializationProvider
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T>
 	void WriteObject(UObject* Object, const FFlake& Flake, const FWriteOptions Options = {})
 	{
 		TArray<uint8> Raw;
@@ -206,7 +189,7 @@ namespace Flakes
 			return;
 		}
 
-		TSerializationProvider::WriteData(Object, Raw);
+		T::WriteData(Object, Raw);
 
 		if (Options.ExecPostLoadOrPostScriptConstruct)
 		{
@@ -214,10 +197,7 @@ namespace Flakes
 		}
 	}
 
-	template <
-		typename TSerializationProvider
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T>
 	FInstancedStruct CreateStruct(const FFlake& Flake, const UScriptStruct* ExpectedStruct, const FWriteOptions Options = CreationDefault, UObject* Outer = nullptr)
 	{
 		UStruct* Struct = nullptr;
@@ -226,16 +206,15 @@ namespace Flakes
 		FInstancedStruct CreatedStruct;
 		CreatedStruct.InitializeAs(Cast<UScriptStruct>(Struct));
 
-		WriteStruct<TSerializationProvider>(CreatedStruct, Flake, Outer, Options);
+		WriteStruct<T>(CreatedStruct, Flake, Outer, Options);
 
 		return CreatedStruct;
 	}
 
 	template <
-		typename TSerializationProvider,
+		CSerializationProvider T,
 		typename TStruct
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value &&
-					TModels_V<CBaseStructureProvider, TStruct>)
+		UE_REQUIRES(TModels_V<CBaseStructureProvider, TStruct>)
 	>
 	TStruct CreateStruct(const FFlake& Flake, UObject* Outer = nullptr, const FWriteOptions Options = CreationDefault)
 	{
@@ -243,15 +222,12 @@ namespace Flakes
 		if (!Private::VerifyStruct(Flake, TBaseStructure<TStruct>::Get(), Struct)) return {};
 
 		TStruct CreatedStruct;
-		WriteStruct<TSerializationProvider>(FStructView::Make(CreatedStruct), Flake, Outer, Options);
+		WriteStruct<T>(FStructView::Make(CreatedStruct), Flake, Outer, Options);
 
 		return CreatedStruct;
 	}
 
-	template <
-		typename TSerializationProvider
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
+	template <CSerializationProvider T>
 	UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer = GetTransientPackage(), const FWriteOptions Options = CreationDefault)
 	{
 		UStruct* Struct = nullptr;
@@ -274,18 +250,14 @@ namespace Flakes
 		}
 
 		UObject* LoadedObject = NewObject<UObject>(Outer, ObjClass);
-		WriteObject<TSerializationProvider>(LoadedObject, Flake, Options);
+		WriteObject<T>(LoadedObject, Flake, Options);
 
 		return LoadedObject;
 	}
 
-	template <
-		typename T,
-		typename TSerializationProvider
-		UE_REQUIRES(TIsDerivedFrom<TSerializationProvider, ISerializationProvider>::Value)
-	>
-	T* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackage(), FWriteOptions Options = CreationDefault)
+	template <typename TClass, CSerializationProvider T>
+	TClass* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackage(), FWriteOptions Options = CreationDefault)
 	{
-		return Cast<T>(CreateObject<TSerializationProvider>(Flake, T::StaticClass(), Outer, Options));
+		return Cast<TClass>(CreateObject<T>(Flake, TClass::StaticClass(), Outer, Options));
 	}
 }
