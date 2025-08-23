@@ -41,21 +41,34 @@ namespace Flakes::Json
 	}
 
 	// Is this struct property a wrapper over a simple numeric type
-	bool IsNumericWrapperStruct(const FStructProperty* Property)
+	const FNumericProperty* IsNumericWrapperStruct(const FStructProperty* Property)
 	{
 		// DateTime already has custom export in JsonObjectConverter, skip this case.
-		if (IsStructCompatWith<FDateTime>(Property)) return false;
+		if (IsStructCompatWith<FDateTime>(Property)) return nullptr;
 
-		const FField* FirstProperty = Property->Struct->ChildProperties;
-		if (FirstProperty && !FirstProperty->Next)
+		const FProperty* FirstProperty = nullptr;
+		for (TFieldIterator<FProperty> It(Property->Struct); It; ++It)
+		{
+			if (FirstProperty)
+			{
+				// If we continue iterating, we have hit a second property, and can exit.
+				return nullptr;
+			}
+			FirstProperty = *It;
+		}
+
+		if (FirstProperty)
 		{
 			if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(FirstProperty))
 			{
-				return !NumericProperty->IsEnum() && Property->Struct;
+				if (!NumericProperty->IsEnum())
+				{
+					return NumericProperty;
+				}
 			}
 		}
 
-		return false;
+		return nullptr;
 	}
 
 	// Copied from ConvertScalarFPropertyToJsonValueWithContainer so we can export to structs directly
@@ -218,9 +231,9 @@ namespace Flakes::Json
 
 				return MakeShared<FJsonValueObject>(JsonObject);
 			}
-			else if (IsNumericWrapperStruct(StructProperty))
+			else if (const FProperty* OnlyProperty = IsNumericWrapperStruct(StructProperty))
 			{
-				return Flake_ExportNumeric(CastField<FNumericProperty>(StructProperty->Struct->ChildProperties), Value);
+				return Flake_ExportNumeric(CastField<FNumericProperty>(OnlyProperty), Value);
 			}
 			return nullptr;
 		}
@@ -350,9 +363,9 @@ namespace Flakes::Json
 					}
 				}
 			}
-			else if (IsNumericWrapperStruct(StructProperty))
+			else if (const FNumericProperty* OnlyProperty = IsNumericWrapperStruct(StructProperty))
 			{
-				return Flake_ImportNumeric(JsonValue, CastField<FNumericProperty>(StructProperty->Struct->ChildProperties), Value);
+				return Flake_ImportNumeric(JsonValue, CastField<FNumericProperty>(OnlyProperty), Value);
 			}
 		}
 
