@@ -636,3 +636,16 @@ FString UFlakesJsonLibrary::ToString(const FJsonObjectWrapper& Json, const bool 
 	}
 	return JsonString;
 }
+
+FString UFlakesJsonLibrary::DebugEmitObjectJson(const UObject* Item, const bool Pretty)
+{
+	const FJsonObjectWrapper Json = CreateFlake_Json(Item);
+	return ToString(Json, Pretty);
+}
+
+bool UFlakesJsonLibrary::DebugCompareObjectsByJson(const UObject* ItemA, const UObject* ItemB)
+{
+	const FJsonObjectWrapper JsonA = CreateFlake_Json(ItemA);
+	const FJsonObjectWrapper JsonB = CreateFlake_Json(ItemB);
+	return ToString(JsonA, false) == ToString(JsonB, false);
+}

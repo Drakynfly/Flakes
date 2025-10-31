@@ -41,4 +41,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Flakes|JsonLibrary")
 	static FString ToString(const FJsonObjectWrapper& Json, bool bPretty);
+
+	// Spits out an item in Json form for debugging.
+	UFUNCTION(BlueprintPure, Category = "Faerie|Debug", meta = (DevelopmentOnly))
+	static FString DebugEmitObjectJson(const UObject* Item, bool Pretty);
+
+	// Compare two items by their Json form.
+	UFUNCTION(BlueprintPure, Category = "Faerie|Debug", meta = (DevelopmentOnly))
+	static bool DebugCompareObjectsByJson(const UObject* ItemA, const UObject* ItemB);
 };

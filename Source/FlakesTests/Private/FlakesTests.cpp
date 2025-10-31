@@ -6,7 +6,7 @@
 #include "Misc/AutomationTest.h"
 
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(FlakesTests,
-								 "Private.FlakesTests",
+								 "Flakes.ToFromTests",
 								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 void FlakesTests::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
