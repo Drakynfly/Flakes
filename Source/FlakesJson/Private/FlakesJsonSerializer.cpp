@@ -1,6 +1,7 @@
 ﻿// Copyright Guy (Drakynfly) Lundvall. All Rights Reserved.
 
 #include "FlakesJsonSerializer.h"
+#include "EngineUpgradeNotice.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagsManager.h"
 #include "JsonObjectConverter.h"
@@ -285,6 +286,25 @@ namespace Flakes::Json
 			}
 		}
 
+		else if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
+		{
+			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			UEnum* EnumDef = EnumProperty->GetEnum();
+			FString StringValue = EnumDef->GetValueOrBitfieldAsAuthoredNameString(EnumProperty->GetUnderlyingProperty()->GetSignedIntPropertyValue(Value));
+			return MakeShared<FJsonValueString>(StringValue);
+		}
+		else if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(Property))
+		{
+			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			UEnum* EnumDef = NumericProperty->GetIntPropertyEnum();
+			if (EnumDef != nullptr)
+			{
+				// export enums as strings
+				FString StringValue = EnumDef->GetValueOrBitfieldAsAuthoredNameString(NumericProperty->GetSignedIntPropertyValue(Value));
+				return MakeShared<FJsonValueString>(StringValue);
+			}
+		}
+
 		return nullptr;
 	}
 
@@ -365,7 +385,55 @@ namespace Flakes::Json
 			}
 			else if (const FNumericProperty* OnlyProperty = IsNumericWrapperStruct(StructProperty))
 			{
+				// Export structs containing only a single numeric value as a number instead of an object.
 				return Flake_ImportNumeric(JsonValue, CastField<FNumericProperty>(OnlyProperty), Value);
+			}
+		}
+
+		else if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
+		{
+			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+
+			if (JsonValue->Type == EJson::String)
+			{
+				// see if we were passed a string for the enum
+				const UEnum* Enum = EnumProperty->GetEnum();
+				check(Enum);
+				FString StrValue = JsonValue->AsString();
+				int64 IntValue = Enum->GetValueOrBitfieldFromString(StrValue, EGetByNameFlags::CheckAuthoredName);
+				if (IntValue == INDEX_NONE)
+				{
+					UE_LOG(LogJson, Error, TEXT("JsonValueToUProperty - Unable to import enum %s from string value %s for property %s"), *Enum->CppType, *StrValue, *Property->GetAuthoredName());
+					return false;
+				}
+				EnumProperty->GetUnderlyingProperty()->SetIntPropertyValue(Value, IntValue);
+				return true;
+			}
+			else
+			{
+				// AsNumber will log an error for completely inappropriate types (then give us a default)
+				EnumProperty->GetUnderlyingProperty()->SetIntPropertyValue(Value, (int64)JsonValue->AsNumber());
+				return true;
+			}
+		}
+		else if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(Property))
+		{
+			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+
+			if (NumericProperty->IsEnum() && JsonValue->Type == EJson::String)
+			{
+				// see if we were passed a string for the enum
+				const UEnum* Enum = NumericProperty->GetIntPropertyEnum();
+				check(Enum); // should be assured by IsEnum()
+				FString StrValue = JsonValue->AsString();
+				int64 IntValue = Enum->GetValueOrBitfieldFromString(StrValue, EGetByNameFlags::CheckAuthoredName);
+				if (IntValue == INDEX_NONE)
+				{
+					UE_LOG(LogJson, Error, TEXT("JsonValueToUProperty - Unable to import enum %s from numeric value %s for property %s"), *Enum->CppType, *StrValue, *Property->GetAuthoredName());
+					return false;
+				}
+				NumericProperty->SetIntPropertyValue(Value, IntValue);
+				return true;
 			}
 		}
 
@@ -379,7 +447,7 @@ namespace Flakes::Json
 
 	void Generic_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer, const bool UsePrettyPrint)
 	{
-		static const EJsonObjectConversionFlags ConversionFlags = EJsonObjectConversionFlags::WriteTextAsComplexString;
+		static constexpr EJsonObjectConversionFlags ConversionFlags = EJsonObjectConversionFlags::WriteTextAsComplexString;
 
 		FOuterTracking KnownOuters;
 		KnownOuters.Add(Outer);
@@ -402,7 +470,7 @@ namespace Flakes::Json
 
 	void Generic_ReadData(const UObject* Object, TArray<uint8>& OutData, const bool UsePrettyPrint)
 	{
-		static const EJsonObjectConversionFlags ConversionFlags = EJsonObjectConversionFlags::WriteTextAsComplexString;
+		static constexpr EJsonObjectConversionFlags ConversionFlags = EJsonObjectConversionFlags::WriteTextAsComplexString;
 
 		FOuterTracking KnownOuters;
 		KnownOuters.Add(Object);
