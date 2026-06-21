@@ -6,6 +6,10 @@
 #include "GameplayTagsManager.h"
 #include "JsonObjectConverter.h"
 
+#include "Engine/World.h"
+
+#include "Policies/CondensedJsonPrintPolicy.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(FlakesJsonSerializer)
 
 namespace Flakes::Json
@@ -288,14 +292,14 @@ namespace Flakes::Json
 
 		else if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 			UEnum* EnumDef = EnumProperty->GetEnum();
 			FString StringValue = EnumDef->GetValueOrBitfieldAsAuthoredNameString(EnumProperty->GetUnderlyingProperty()->GetSignedIntPropertyValue(Value));
 			return MakeShared<FJsonValueString>(StringValue);
 		}
 		else if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 			UEnum* EnumDef = NumericProperty->GetIntPropertyEnum();
 			if (EnumDef != nullptr)
 			{
@@ -392,7 +396,7 @@ namespace Flakes::Json
 
 		else if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 
 			if (JsonValue->Type == EJson::String)
 			{
@@ -418,7 +422,7 @@ namespace Flakes::Json
 		}
 		else if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 
 			if (NumericProperty->IsEnum() && JsonValue->Type == EJson::String)
 			{
