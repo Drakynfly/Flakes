@@ -2,9 +2,14 @@
 
 #include "FlakesJsonSerializer.h"
 #include "EngineUpgradeNotice.h"
+#include "FlakesJsonObjectStructInterface.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagsManager.h"
 #include "JsonObjectConverter.h"
+
+#include "Engine/World.h"
+
+#include "Policies/CondensedJsonPrintPolicy.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(FlakesJsonSerializer)
 
@@ -60,13 +65,7 @@ namespace Flakes::Json
 
 		if (FirstProperty)
 		{
-			if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(FirstProperty))
-			{
-				if (!NumericProperty->IsEnum())
-				{
-					return NumericProperty;
-				}
-			}
+			return CastField<FNumericProperty>(FirstProperty);
 		}
 
 		return nullptr;
@@ -288,14 +287,14 @@ namespace Flakes::Json
 
 		else if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 			UEnum* EnumDef = EnumProperty->GetEnum();
 			FString StringValue = EnumDef->GetValueOrBitfieldAsAuthoredNameString(EnumProperty->GetUnderlyingProperty()->GetSignedIntPropertyValue(Value));
 			return MakeShared<FJsonValueString>(StringValue);
 		}
 		else if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 			UEnum* EnumDef = NumericProperty->GetIntPropertyEnum();
 			if (EnumDef != nullptr)
 			{
@@ -317,6 +316,43 @@ namespace Flakes::Json
 	{
 		if (const FStructProperty* StructProperty = CastField<FStructProperty>(Property))
 		{
+			if (const TSharedPtr<FJsonObject>* JsonObject = nullptr;
+				JsonValue->TryGetObject(JsonObject))
+			{
+				if (const IJsonObjectStructConverter* ConverterInterface = Flakes::Json::Private::GetStructConverterInterface(StructProperty->Struct))
+				{
+					switch (ConverterInterface->ConvertFromJson(Value, JsonObject->ToSharedRef(), This))
+					{
+					case EJsonObjectConvertResult::UseDefaultConverter:
+						{
+							//bUseDefaultConverter = true;
+							break;
+						}
+					case EJsonObjectConvertResult::FailAndAbort:
+						{
+							UE_LOG(LogJson, Error, TEXT("JsonValueToUProperty - Unable to convert JSON object into %s property %s while use a IJsonObjectStructConverter"), *StructProperty->Struct->GetAuthoredName(), *Property->GetAuthoredName());
+							//if (OutFailReason)
+							//{
+							//	*OutFailReason = FText::Format(LOCTEXT("FailConvertStructFromObject", "Unable to convert JSON object into {0} property {1}\n{2} while using a IJsonObjectStructConverter"), FText::FromString(StructProperty->Struct->GetAuthoredName()), FText::FromString(Property->GetAuthoredName()), *OutFailReason);
+							//}
+							return false;
+						}
+					case EJsonObjectConvertResult::IgnoreAndContinue:
+					case EJsonObjectConvertResult::Converted:
+						{
+							// IgnoreAndContinue and Converted are treated the same here
+							//bUseDefaultConverter = false;
+							break;
+						}
+					default:
+						{
+							unimplemented();
+							break;
+						}
+					}
+				}
+			}
+
 			/*
 			// Custom Guid Import
 			if (IsStructCompatWith<FGuid>(StructProperty))
@@ -392,7 +428,7 @@ namespace Flakes::Json
 
 		else if (const FEnumProperty* EnumProperty = CastField<FEnumProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 
 			if (JsonValue->Type == EJson::String)
 			{
@@ -418,7 +454,7 @@ namespace Flakes::Json
 		}
 		else if (const FNumericProperty* NumericProperty = CastField<FNumericProperty>(Property))
 		{
-			ENGINE_UPGRADE_NOTICE(8, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
+			ENGINE_UPGRADE_NOTICE(9, "Remove this after engine update if PR has been accepted. https://github.com/EpicGames/UnrealEngine/pull/14400")
 
 			if (NumericProperty->IsEnum() && JsonValue->Type == EJson::String)
 			{

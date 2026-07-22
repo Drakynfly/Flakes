@@ -6,6 +6,19 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(FlakesSaveGame)
 
+void UFlakesSaveGame::Serialize(FArchive& Ar)
+{
+	Super::Serialize(Ar);
+
+	UE_LOG(LogFlakes, Verbose, TEXT("Serialize for FlakesSaveFile called with Archive in state: %s"),
+		Ar.IsLoading() ? TEXT("Loading") : Ar.IsSaving() ? TEXT("Saving") : TEXT("Unknown"));
+
+	Ar << Flake;
+
+	UE_LOG(LogFlakes, Verbose, TEXT("Serialize for FlakesSaveFile class: %s"),
+		*Flake.Struct.ToString());
+}
+
 void UFlakesSaveGame::SetObjectToSave(UObject* Obj)
 {
 	Flake = Flakes::MakeFlake<Flakes::Binary::Type>(Obj);
@@ -29,17 +42,4 @@ UObject* UFlakesSaveGame::LoadObjectFromDataClassChecked(UObject* Outer, const U
 	}
 
 	return nullptr;
-}
-
-void UFlakesSaveGame::Serialize(FArchive& Ar)
-{
-	Super::Serialize(Ar);
-
-	UE_LOG(LogFlakes, Log, TEXT("Serialize for RoseSaveFile called with Archive in state: %s"),
-		Ar.IsLoading() ? TEXT("Loading") : Ar.IsSaving() ? TEXT("Saving") : TEXT("Unknown"));
-
-	Ar << Flake;
-
-	UE_LOG(LogFlakes, Log, TEXT("Serialize for RoseSaveFile class: %s"),
-		*Flake.Struct.ToString());
 }

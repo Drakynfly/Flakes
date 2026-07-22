@@ -4,7 +4,6 @@
 
 #include "FlakesData.h"
 #include "GameFramework/SaveGame.h"
-#include "UObject/Package.h"
 
 #include "FlakesSaveGame.generated.h"
 
@@ -19,6 +18,8 @@ class FLAKES_API UFlakesSaveGame : public USaveGame
 	GENERATED_BODY()
 
 public:
+	virtual void Serialize(FArchive& Ar) override;
+
 	UFUNCTION(BlueprintCallable, Category = "Flakes|FlakeSave")
 	void SetObjectToSave(UObject* Obj);
 
@@ -29,7 +30,7 @@ public:
 	UObject* LoadObjectFromData(UObject* Outer) const;
 
 	template <typename TClass>
-	TClass* LoadObjectFromData(UObject* Outer = GetTransientPackage())
+	TClass* LoadObjectFromData(UObject* Outer = GetTransientPackageAsObject())
 	{
 		if (auto Obj = LoadObjectFromDataClassChecked(Outer, TClass::StaticClass()))
 		{
@@ -45,6 +46,4 @@ public:
 private:
 	UPROPERTY()
 	FFlake Flake;
-
-	virtual void Serialize(FArchive& Ar) override;
 };

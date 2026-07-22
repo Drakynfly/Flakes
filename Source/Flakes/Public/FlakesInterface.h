@@ -8,7 +8,6 @@
 #include "GameFramework/Actor.h"
 #include "StructUtils/InstancedStruct.h"
 #include "StructUtils/StructView.h"
-#include "UObject/Package.h"
 
 namespace Flakes
 {
@@ -44,8 +43,13 @@ namespace Flakes
 	}
 
 	/* Interface for using Providers dynamically from their FName. */
-	struct ISerializationProvider : FVirtualDestructor, FNoncopyable
+	struct ISerializationProvider
 	{
+		UE_NONCOPYABLE(ISerializationProvider)
+
+		ISerializationProvider() = default;
+		virtual ~ISerializationProvider() = default;
+
 		virtual FName GetProviderName() = 0;
 		virtual void Virtual_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer = nullptr) = 0;
 		virtual void Virtual_ReadData(const UObject* Object, TArray<uint8>& OutData) = 0;
@@ -105,7 +109,7 @@ namespace Flakes
 	template <
 		typename T
 	>
-	T* CreateObject(FName Serializer, const FFlake& Flake, UObject* Outer = GetTransientPackage(), FWriteOptions Options = CreationDefault)
+	T* CreateObject(FName Serializer, const FFlake& Flake, UObject* Outer = GetTransientPackageAsObject(), FWriteOptions Options = CreationDefault)
 	{
 		return Cast<T>(CreateObject(Serializer, Flake, Outer, T::StaticClass(), Options));
 	}
@@ -228,7 +232,7 @@ namespace Flakes
 	}
 
 	template <CSerializationProvider T>
-	UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer = GetTransientPackage(), const FWriteOptions Options = CreationDefault)
+	UObject* CreateObject(const FFlake& Flake, const UClass* ExpectedClass, UObject* Outer = GetTransientPackageAsObject(), const FWriteOptions Options = CreationDefault)
 	{
 		UStruct* Struct = nullptr;
 		if (!Private::VerifyStruct(Flake, ExpectedClass, Struct)) return nullptr;
@@ -256,7 +260,7 @@ namespace Flakes
 	}
 
 	template <typename TClass, CSerializationProvider T>
-	TClass* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackage(), FWriteOptions Options = CreationDefault)
+	TClass* CreateObject(const FFlake& Flake, UObject* Outer = GetTransientPackageAsObject(), FWriteOptions Options = CreationDefault)
 	{
 		return Cast<TClass>(CreateObject<T>(Flake, TClass::StaticClass(), Outer, Options));
 	}
