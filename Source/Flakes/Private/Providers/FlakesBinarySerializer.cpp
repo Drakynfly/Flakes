@@ -17,7 +17,7 @@ namespace Flakes::Binary
 
 		if (MemoryWriter.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::ReadData failed to serialized struct!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_Binary::ReadData failed to serialized struct!");
 		}
 
 		MemoryWriter.FlushCache();
@@ -31,7 +31,7 @@ namespace Flakes::Binary
 
 		if (MemoryWriter.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::ReadData failed to serialized object!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_Binary::ReadData failed to serialized object!");
 		}
 
 		MemoryWriter.FlushCache();
@@ -46,7 +46,7 @@ namespace Flakes::Binary
 
 		if (MemoryReader.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::WriteData failed to serialized struct!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_Binary::WriteData failed to serialized struct!");
 		}
 
 		MemoryReader.FlushCache();
@@ -60,7 +60,7 @@ namespace Flakes::Binary
 
 		if (MemoryReader.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_Binary::WriteData failed to serialized object!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_Binary::WriteData failed to serialized object!");
 		}
 
 		MemoryReader.FlushCache();

@@ -132,7 +132,7 @@ namespace Flakes
 
 				if (Class.IsNull())
 				{
-					UE_LOG(LogFlakes, Error, TEXT("FRecursiveMemoryReader failed to load Class: Null Path"))
+					UE_LOGF(LogFlakes, Error, "FRecursiveMemoryReader failed to load Class: Null Path")
 					SetError();
 				}
 				else if (const UClass* ObjClass = Class.TryLoadClass<UObject>())
@@ -144,7 +144,7 @@ namespace Flakes
 				}
 				else
 				{
-					UE_LOG(LogFlakes, Error, TEXT("FRecursiveMemoryReader failed to load Class: '%s'"), *Class.ToString())
+					UE_LOGF(LogFlakes, Error, "FRecursiveMemoryReader failed to load Class: '%ls'", *Class.ToString())
 					SetError();
 				}
 			}

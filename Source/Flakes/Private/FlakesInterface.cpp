@@ -33,13 +33,13 @@ namespace Flakes
 			OutStruct = Cast<UStruct>(Flake.Struct.TryLoad());
 			if (!IsValid(OutStruct))
 			{
-				UE_LOG(LogFlakes, Error, TEXT("VerifyStruct: Invalid Struct Type. Failed to load, or was null."));
+				UE_LOGF(LogFlakes, Error, "VerifyStruct: Invalid Struct Type. Failed to load, or was null.");
 				return false;
 			}
 
 			if (!OutStruct->IsChildOf(Expected))
 			{
-				UE_LOG(LogFlakes, Error, TEXT("VerifyStruct: StructType does match Expected type"));
+				UE_LOGF(LogFlakes, Error, "VerifyStruct: StructType does match Expected type");
 				return false;
 			}
 
@@ -61,7 +61,7 @@ namespace Flakes
 			const bool Success = FOodleCompressedArray::CompressTArray(Flake.Data, Raw, Options.Compressor, Options.CompressionLevel);
 			if (!Success)
 			{
-				UE_LOG(LogFlakes, Error, TEXT("CompressFlake failed!"))
+				UE_LOGF(LogFlakes, Error, "CompressFlake failed!")
 			}
 #if WITH_EDITOR
 			else
@@ -69,7 +69,7 @@ namespace Flakes
 				const auto AfterCompression = Flake.Data.NumBytes();
 				if (CVarLogCompressionStatistics.GetValueOnGameThread())
 				{
-					UE_LOG(LogFlakes, Log, TEXT("[Flake Compression Log]: Compressed '%llu' bytes to '%llu' bytes"), BeforeCompression, AfterCompression);
+					UE_LOGF(LogFlakes, Log, "[Flake Compression Log]: Compressed '%llu' bytes to '%llu' bytes", BeforeCompression, AfterCompression);
 				}
 			}
 #endif
@@ -89,7 +89,7 @@ namespace Flakes
 			const bool Success = FOodleCompressedArray::DecompressToTArray(Raw, Flake.Data);
 			if (!Success)
 			{
-				UE_LOG(LogFlakes, Error, TEXT("DecompressFlake failed!"))
+				UE_LOGF(LogFlakes, Error, "DecompressFlake failed!")
 			}
 			return Success;
 		}
@@ -135,7 +135,7 @@ namespace Flakes
 					Provider->Virtual_ReadData(Struct, Raw, Outer);
 				}))
 			{
-				UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+				UE_LOGF(LogFlakes, Error, "Invalid Serializer at runtime: %ls", *Serializer.ToString())
 				return FFlake();
 			}
 		}
@@ -167,7 +167,7 @@ namespace Flakes
 				Provider->Virtual_ReadData(Object, Raw);
 			}))
 		{
-			UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+			UE_LOGF(LogFlakes, Error, "Invalid Serializer at runtime: %ls", *Serializer.ToString())
 			return FFlake();
 		}
 
@@ -194,7 +194,7 @@ namespace Flakes
 				Provider->Virtual_WriteData(Struct, Raw, Outer);
 			}))
 		{
-			UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+			UE_LOGF(LogFlakes, Error, "Invalid Serializer at runtime: %ls", *Serializer.ToString())
 			return;
 		}
 
@@ -218,7 +218,7 @@ namespace Flakes
 				Provider->Virtual_WriteData(Object, Raw);
 			}))
 		{
-			UE_LOG(LogFlakes, Error, TEXT("Invalid Serializer at runtime: %s"), *Serializer.ToString())
+			UE_LOGF(LogFlakes, Error, "Invalid Serializer at runtime: %ls", *Serializer.ToString())
 			return;
 		}
 

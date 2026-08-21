@@ -107,7 +107,7 @@ namespace Flakes::Json
 			int64 IntValue = Enum->GetValueOrBitfieldFromString(StrValue, EGetByNameFlags::CheckAuthoredName);
 			if (IntValue == INDEX_NONE)
 			{
-				//UE_LOG(LogJson, Error, TEXT("JsonValueToUProperty - Unable to import enum %s from numeric value %s for property %s"), *Enum->CppType, *StrValue, *Property->GetAuthoredName());
+				//UE_LOGF(LogJson, Error, "JsonValueToUProperty - Unable to import enum %ls from numeric value %ls for property %ls", *Enum->CppType, *StrValue, *NumericProperty->GetAuthoredName());
 				return false;
 			}
 			NumericProperty->SetIntPropertyValue(OutValue, IntValue);
@@ -167,7 +167,7 @@ namespace Flakes::Json
 			}
 			else
 			{
-				UE_LOG(LogJson, Warning, TEXT("UStructToJsonObjectString - Unable to write out JSON"));
+				UE_LOGF(LogJson, Warning, "UStructToJsonObjectString - Unable to write out JSON");
 			}
 		}
 
@@ -330,7 +330,7 @@ namespace Flakes::Json
 						}
 					case EJsonObjectConvertResult::FailAndAbort:
 						{
-							UE_LOG(LogJson, Error, TEXT("JsonValueToUProperty - Unable to convert JSON object into %s property %s while use a IJsonObjectStructConverter"), *StructProperty->Struct->GetAuthoredName(), *Property->GetAuthoredName());
+							UE_LOGF(LogJson, Error, "JsonValueToUProperty - Unable to convert JSON object into %ls property %ls while use a IJsonObjectStructConverter", *StructProperty->Struct->GetAuthoredName(), *Property->GetAuthoredName());
 							//if (OutFailReason)
 							//{
 							//	*OutFailReason = FText::Format(LOCTEXT("FailConvertStructFromObject", "Unable to convert JSON object into {0} property {1}\n{2} while using a IJsonObjectStructConverter"), FText::FromString(StructProperty->Struct->GetAuthoredName()), FText::FromString(Property->GetAuthoredName()), *OutFailReason);
@@ -439,7 +439,7 @@ namespace Flakes::Json
 				int64 IntValue = Enum->GetValueOrBitfieldFromString(StrValue, EGetByNameFlags::CheckAuthoredName);
 				if (IntValue == INDEX_NONE)
 				{
-					UE_LOG(LogJson, Error, TEXT("JsonValueToUProperty - Unable to import enum %s from string value %s for property %s"), *Enum->CppType, *StrValue, *Property->GetAuthoredName());
+					UE_LOGF(LogJson, Error, "JsonValueToUProperty - Unable to import enum %ls from string value %ls for property %ls", *Enum->CppType, *StrValue, *Property->GetAuthoredName());
 					return false;
 				}
 				EnumProperty->GetUnderlyingProperty()->SetIntPropertyValue(Value, IntValue);
@@ -465,7 +465,7 @@ namespace Flakes::Json
 				int64 IntValue = Enum->GetValueOrBitfieldFromString(StrValue, EGetByNameFlags::CheckAuthoredName);
 				if (IntValue == INDEX_NONE)
 				{
-					UE_LOG(LogJson, Error, TEXT("JsonValueToUProperty - Unable to import enum %s from numeric value %s for property %s"), *Enum->CppType, *StrValue, *Property->GetAuthoredName());
+					UE_LOGF(LogJson, Error, "JsonValueToUProperty - Unable to import enum %ls from numeric value %ls for property %ls", *Enum->CppType, *StrValue, *Property->GetAuthoredName());
 					return false;
 				}
 				NumericProperty->SetIntPropertyValue(Value, IntValue);

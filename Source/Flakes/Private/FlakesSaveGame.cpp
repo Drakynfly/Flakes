@@ -10,12 +10,12 @@ void UFlakesSaveGame::Serialize(FArchive& Ar)
 {
 	Super::Serialize(Ar);
 
-	UE_LOG(LogFlakes, Verbose, TEXT("Serialize for FlakesSaveFile called with Archive in state: %s"),
+	UE_LOGF(LogFlakes, Verbose, "Serialize for FlakesSaveFile called with Archive in state: %ls",
 		Ar.IsLoading() ? TEXT("Loading") : Ar.IsSaving() ? TEXT("Saving") : TEXT("Unknown"));
 
 	Ar << Flake;
 
-	UE_LOG(LogFlakes, Verbose, TEXT("Serialize for FlakesSaveFile class: %s"),
+	UE_LOGF(LogFlakes, Verbose, "Serialize for FlakesSaveFile class: %ls",
 		*Flake.Struct.ToString());
 }
 

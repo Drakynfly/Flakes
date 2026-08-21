@@ -28,7 +28,7 @@ namespace Flakes::NetBinary
 
 		if (MemoryWriter.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_NetBinary::ReadData failed to serialized struct!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_NetBinary::ReadData failed to serialized struct!");
 		}
 
 		MemoryWriter.FlushCache();
@@ -43,7 +43,7 @@ namespace Flakes::NetBinary
 
 		if (MemoryWriter.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_NetBinary::ReadData failed to serialized object!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_NetBinary::ReadData failed to serialized object!");
 		}
 
 		MemoryWriter.FlushCache();
@@ -59,7 +59,7 @@ namespace Flakes::NetBinary
 
 		if (MemoryReader.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_NetBinary::WriteData failed to serialized struct!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_NetBinary::WriteData failed to serialized struct!");
 		}
 
 		MemoryReader.FlushCache();
@@ -74,7 +74,7 @@ namespace Flakes::NetBinary
 
 		if (MemoryReader.IsError())
 		{
-			UE_LOG(LogFlakes, Error, TEXT("FSerializationProvider_NetBinary::WriteData failed to serialized object!"));
+			UE_LOGF(LogFlakes, Error, "FSerializationProvider_NetBinary::WriteData failed to serialized object!");
 		}
 
 		MemoryReader.FlushCache();

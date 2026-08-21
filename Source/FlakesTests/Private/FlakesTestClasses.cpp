@@ -72,13 +72,13 @@ bool UFlakesTestComplexObject::Equals(const UFlakesTestComplexObject* TestObject
 {
 	if (TestSimpleObjectArray.Num() != TestObject2->TestSimpleObjectArray.Num())
 	{
-		UE_LOG(LogTemp, Error, TEXT("TestComplexObject::Equals: Num Mismatch"));
+		UE_LOGF(LogTemp, Error, "TestComplexObject::Equals: Num Mismatch");
 		return false;
 	}
 
 	if (!ObjOwnedByUs->Equals(TestObject2->ObjOwnedByUs, Result))
 	{
-		UE_LOG(LogTemp, Error, TEXT("TestComplexObject::Equals: ObjOwnedByUs Mismatch"));
+		UE_LOGF(LogTemp, Error, "TestComplexObject::Equals: ObjOwnedByUs Mismatch");
 		return false;
 	}
 
@@ -90,13 +90,13 @@ bool UFlakesTestComplexObject::Equals(const UFlakesTestComplexObject* TestObject
 		// We don't want the *same* object to deserialize via name lookup. We want a new, but member-wise identical, object.
 		if (Object1 == Object2)
 		{
-			UE_LOG(LogTemp, Error, TEXT("TestComplexObject::Equals: Array[%i] Objects are same, should be duplicate"), i);
+			UE_LOGF(LogTemp, Error, "TestComplexObject::Equals: Array[%i] Objects are same, should be duplicate", i);
 			return false;
 		}
 
 		if (!Object1->Equals(Object2, Result))
 		{
-			UE_LOG(LogTemp, Error, TEXT("TestComplexObject::Equals: Array[%i] Mismatch"), i);
+			UE_LOGF(LogTemp, Error, "TestComplexObject::Equals: Array[%i] Mismatch", i);
 			return false;
 		}
 	}
