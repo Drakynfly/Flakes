@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "UObject/SoftObjectPath.h"
 #include "FlakesData.generated.h"
 
 USTRUCT(BlueprintType)

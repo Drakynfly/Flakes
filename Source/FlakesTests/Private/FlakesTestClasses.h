@@ -21,7 +21,7 @@ struct FFlakesTestWrapperStruct
 	static FFlakesTestWrapperStruct Rand()
 	{
 		FFlakesTestWrapperStruct Struct;
-		Struct.TestFloat = FMath::FRand() * FMath::Rand();
+		Struct.TestFloat = FMath::FRand() * static_cast<float>(FMath::Rand());
 		return Struct;
 	}
 
@@ -51,7 +51,7 @@ struct FFlakesTestCompoundStruct
 	static FFlakesTestCompoundStruct Rand()
 	{
 		FFlakesTestCompoundStruct Struct;
-		Struct.TestFloat = FMath::FRand() * FMath::Rand();
+		Struct.TestFloat = FMath::FRand() * static_cast<float>(FMath::Rand());
         Struct.TestVector = FMath::VRand() * FMath::Rand();
 		Struct.InstancedVector.InitializeAs(FMath::VRand() * FMath::Rand());
 		FGameplayTagContainer Container;
@@ -88,7 +88,7 @@ public:
 	static UFlakesTestSimpleObject* New(UObject* Outer = (UObject*)GetTransientPackage())
 	{
 		UFlakesTestSimpleObject* SimpleObject = NewObject<UFlakesTestSimpleObject>(Outer);
-		SimpleObject->TestFloat = FMath::FRand() * FMath::Rand();
+		SimpleObject->TestFloat = FMath::FRand() * static_cast<float>(FMath::Rand());
 		SimpleObject->TestVector = FMath::VRand() * FMath::Rand();
 		SimpleObject->TestWrapper = FFlakesTestWrapperStruct::Rand();
 		SimpleObject->TestStruct = FFlakesTestCompoundStruct::Rand();
