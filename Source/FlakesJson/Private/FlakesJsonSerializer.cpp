@@ -312,7 +312,7 @@ namespace Flakes::Json
 		return FJsonObjectConverter::CustomExportCallback::CreateStatic(&JsonCustomExporter, This, Outers);
 	}
 
-	bool JsonCustomImporter(const TSharedPtr<FJsonValue>& JsonValue, FProperty* Property, void* Value, const FJsonObjectConverter::CustomImportCallback* This, UObject* Outer)
+	bool JsonCustomImporter(const TSharedPtr<FJsonValue>& JsonValue, FProperty* Property, void* Value, UObject* Outer, TNotNull<const FJsonObjectStructImportArgs*> Args)
 	{
 		if (const FStructProperty* StructProperty = CastField<FStructProperty>(Property))
 		{
@@ -321,7 +321,7 @@ namespace Flakes::Json
 			{
 				if (const IJsonObjectStructConverter* ConverterInterface = Flakes::Json::Private::GetStructConverterInterface(StructProperty->Struct))
 				{
-					switch (ConverterInterface->ConvertFromJson(Value, JsonObject->ToSharedRef(), This))
+					switch (ConverterInterface->ConvertFromJson(Value, JsonObject->ToSharedRef(), *Args))
 					{
 					case EJsonObjectConvertResult::UseDefaultConverter:
 						{
@@ -387,8 +387,6 @@ namespace Flakes::Json
 				{
 					FJsonObject* Obj = JsonObject->Get();
 
-					constexpr bool bStrictMode = false;
-
 					const UScriptStruct* PropertyStruct = StructProperty->Struct;
 
 					// If a specific subclass was stored in the JSON, use that instead of the PropertyClass
@@ -409,11 +407,11 @@ namespace Flakes::Json
 					if (FJsonObjectConverter::JsonObjectToUStruct(JsonObject->ToSharedRef(),
 							PropertyStruct,
 							InstancedStruct->GetMutableMemory(),
-							CheckFlags,
-							SkipFlags,
-							bStrictMode,
+							Args->CheckFlags,
+							Args->SkipFlags,
+							Args->StrictMode,
 							nullptr,
-							This))
+							&Args->ImportCallback))
 					{
 						return true;
 					}
@@ -476,9 +474,9 @@ namespace Flakes::Json
 		return false;
 	}
 
-	FJsonObjectConverter::CustomImportCallback MakeJsonCustomImporter(const FJsonObjectConverter::CustomImportCallback* This, UObject* Outer)
+	FJsonObjectConverter::CustomImportCallback MakeJsonCustomImporter(UObject* Outer, TNotNull<const FJsonObjectStructImportArgs*> This)
 	{
-		return FJsonObjectConverter::CustomImportCallback::CreateStatic(&JsonCustomImporter, This, Outer);
+		return FJsonObjectConverter::CustomImportCallback::CreateStatic(&JsonCustomImporter, Outer, This);
 	}
 
 	void Generic_ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer, const bool UsePrettyPrint)
@@ -543,20 +541,20 @@ namespace Flakes::Json
 			}
 		}
 
-		constexpr bool bStrictMode = false;
-
-		FJsonObjectConverter::CustomImportCallback CustomImporter;
-		CustomImporter = MakeJsonCustomImporter(&CustomImporter, Outer);
+		FJsonObjectStructImportArgs Args;
+		Args.CheckFlags = CheckFlags;
+		Args.SkipFlags = SkipFlags;
+		Args.ImportCallback = MakeJsonCustomImporter(Outer, &Args);
 
 		FJsonObjectConverter::JsonObjectToUStruct(
 			JsonObject.ToSharedRef(),
 			Struct.GetScriptStruct(),
 			Struct.GetMemory(),
-			CheckFlags,
-			SkipFlags,
-			bStrictMode,
+			Args.CheckFlags,
+			Args.SkipFlags,
+			Args.StrictMode,
 			nullptr,
-			&CustomImporter);
+			&Args.ImportCallback);
 	}
 
 	void Generic_WriteData(UObject* Object, const TArray<uint8>& Data)
@@ -576,20 +574,20 @@ namespace Flakes::Json
 			}
 		}
 
-		constexpr bool bStrictMode = false;
-
-		FJsonObjectConverter::CustomImportCallback CustomImporter;
-		CustomImporter = MakeJsonCustomImporter(&CustomImporter, Object);
+		FJsonObjectStructImportArgs Args;
+		Args.CheckFlags = CheckFlags;
+		Args.SkipFlags = SkipFlags;
+		Args.ImportCallback = MakeJsonCustomImporter(Object, &Args);
 
 		FJsonObjectConverter::JsonObjectToUStruct(
 			JsonObject.ToSharedRef(),
 			Object->GetClass(),
 			Object,
-			CheckFlags,
-			SkipFlags,
-			bStrictMode,
+			Args.CheckFlags,
+			Args.SkipFlags,
+			Args.StrictMode,
 			nullptr,
-			&CustomImporter);
+			&Args.ImportCallback);
 	}
 
 	void FSerializationProvider_Json::ReadData(const FConstStructView& Struct, TArray<uint8>& OutData, const UObject* Outer)
@@ -685,16 +683,19 @@ UObject* UFlakesJsonLibrary::ConstructObjectFromFlake_Json(const FJsonObjectWrap
 	const UClass* ExpectedClass)
 {
 	UObject* Obj = NewObject<UObject>(Outer, ExpectedClass);
-	FJsonObjectConverter::CustomImportCallback CustomImporter;
-	CustomImporter = Flakes::Json::MakeJsonCustomImporter(&CustomImporter, Outer);
+
+	Flakes::FJsonObjectStructImportArgs Args;
+	Args.CheckFlags = Flakes::Json::CheckFlags;
+	Args.SkipFlags = Flakes::Json::SkipFlags;
+	Args.ImportCallback = Flakes::Json::MakeJsonCustomImporter(Outer, &Args);
 
 	FJsonObjectConverter::JsonObjectToUStruct(Flake.JsonObject.ToSharedRef(), ExpectedClass,
 		Obj,
-		Flakes::Json::CheckFlags,
-		Flakes::Json::SkipFlags,
-		false,
+		Args.CheckFlags,
+		Args.SkipFlags,
+		Args.StrictMode,
 		nullptr,
-		&CustomImporter);
+		&Args.ImportCallback);
 	return Obj;
 }
 
@@ -704,16 +705,18 @@ AActor* UFlakesJsonLibrary::ConstructActorFromFlake_Json(const FJsonObjectWrappe
 	if (AActor* LoadedActor = WorldContextObj->GetWorld()->SpawnActorDeferred<AActor>(
 			ExpectedClass, FTransform::Identity))
 	{
-		FJsonObjectConverter::CustomImportCallback CustomImporter;
-		CustomImporter = Flakes::Json::MakeJsonCustomImporter(&CustomImporter, LoadedActor);
+		Flakes::FJsonObjectStructImportArgs Args;
+		Args.CheckFlags = Flakes::Json::CheckFlags;
+		Args.SkipFlags = Flakes::Json::SkipFlags;
+		Args.ImportCallback = Flakes::Json::MakeJsonCustomImporter(LoadedActor, &Args);
 
 		FJsonObjectConverter::JsonObjectToUStruct(Flake.JsonObject.ToSharedRef(), ExpectedClass,
 			LoadedActor,
-			Flakes::Json::CheckFlags,
-			Flakes::Json::SkipFlags,
-			false,
+			Args.CheckFlags,
+			Args.SkipFlags,
+			Args.StrictMode,
 			nullptr,
-			&CustomImporter);
+			&Args.ImportCallback);
 
 		LoadedActor->FinishSpawning(LoadedActor->GetTransform());
 

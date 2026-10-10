@@ -11,11 +11,19 @@ class FJsonObject;
 
 /**
  * This file is a copy of the engine's Source/Runtime/JsonUtilities/Public/JsonObjectStructInterface.h that I have
- * modified to carry the Export/Import callback, as without these, nested conversion does not work.
+ * modified to carry the Export/Import callback and other params, as without these, nested conversion does not work.
  * If the engine adds this ability, this interface will be removed.
  */
 namespace Flakes
 {
+	struct FJsonObjectStructImportArgs
+	{
+		FJsonObjectConverter::CustomImportCallback ImportCallback;
+		int64 CheckFlags = 0;
+		int64 SkipFlags = 0;
+		bool StrictMode = false;
+	};
+
 	struct IJsonObjectStructConverter;
 
 	/** Global registry for type-registered static-interface converters to override default struct behavior in FJsonObjectConverter. */
@@ -49,7 +57,7 @@ namespace Flakes
 		* IgnoreAndContinue should leave the struct untouched/default and the converter tree can still succeed,
 		* and UseDefaultConverter will try to fallback to the non-static-interface behavior instead.
 		*/
-		virtual EJsonObjectConvertResult ConvertFromJson(void* StructMemory, const TSharedPtr<FJsonObject>& InJsonObject, const FJsonObjectConverter::CustomImportCallback* ImportCb) const = 0;
+		virtual EJsonObjectConvertResult ConvertFromJson(void* StructMemory, const TSharedPtr<FJsonObject>& InJsonObject, const FJsonObjectStructImportArgs& Args) const = 0;
 
 	protected:
 
@@ -83,9 +91,9 @@ namespace Flakes
 			return static_cast<const StructType*>(StructMemory)->ConvertToJson(OutJsonObject, ExportCb);
 		}
 
-		virtual EJsonObjectConvertResult ConvertFromJson(void* StructMemory, const TSharedPtr<FJsonObject>& InJsonObject, const FJsonObjectConverter::CustomImportCallback* ImportCb) const override
+		virtual EJsonObjectConvertResult ConvertFromJson(void* StructMemory, const TSharedPtr<FJsonObject>& InJsonObject, const FJsonObjectStructImportArgs& Args) const override
 		{
-			return static_cast<StructType*>(StructMemory)->ConvertFromJson(InJsonObject, ImportCb);
+			return static_cast<StructType*>(StructMemory)->ConvertFromJson(InJsonObject, Args);
 		}
 	};
 }
